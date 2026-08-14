@@ -373,7 +373,7 @@ class Game {
       this.height = height;
     }
 
-    this.timeLeft = 9000 + this.match * 1000 * 0.1;
+    this.timeLeft = 20000 + this.match * 1000 * 0.1;
 
     this.timeSinceLastAction = 0;
     this.enemies = [];
@@ -435,9 +435,9 @@ class Game {
     // Anti-estancamiento: si no hay kills y quedan 3+ equipos,
     // fuerza una cuenta atrás corta para que el match siempre fluya
     this.timeSinceLastAction += deltaTime;
-    if (this.timeSinceLastAction > 20000 && unique.length > 2) {
+    if (this.timeSinceLastAction > 30000 && unique.length > 2) {
       this.options.setMechanic("timeless", false);
-      this.timeLeft = Math.min(this.timeLeft, 6000);
+      this.timeLeft = Math.min(this.timeLeft, 10000);
     }
 
     if (unique.length === 1) {

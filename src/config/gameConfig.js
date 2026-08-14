@@ -45,7 +45,7 @@ export const RACE_STATS = Object.freeze({
     team: "rocks",
     color: "gray",
     aim: ["scissors", "lizards"],
-    health: { current: 220, max: 220 },
+    health: { current: 440, max: 440 },
     damage: { amount: 7 },
     movement: {
       baseSpeed: 3,
@@ -63,7 +63,7 @@ export const RACE_STATS = Object.freeze({
     team: "papers",
     color: "purple",
     aim: ["rocks", "spocks"],
-    health: { current: 200, max: 200 },
+    health: { current: 400, max: 400 },
     damage: { amount: 8 },
     movement: {
       baseSpeed: 3.5,
@@ -81,7 +81,7 @@ export const RACE_STATS = Object.freeze({
     team: "scissors",
     color: "red",
     aim: ["papers", "lizards"],
-    health: { current: 180, max: 180 },
+    health: { current: 360, max: 360 },
     damage: { amount: 10 },
     movement: {
       baseSpeed: 3.5,
@@ -99,7 +99,7 @@ export const RACE_STATS = Object.freeze({
     team: "lizards",
     color: "green",
     aim: ["spocks", "papers"],
-    health: { current: 160, max: 160 },
+    health: { current: 320, max: 320 },
     damage: { amount: 8 },
     movement: {
       baseSpeed: 5,
@@ -117,7 +117,7 @@ export const RACE_STATS = Object.freeze({
     team: "spocks",
     color: "yellow",
     aim: ["rocks", "scissors"],
-    health: { current: 190, max: 190 },
+    health: { current: 380, max: 380 },
     damage: { amount: 7 },
     movement: {
       baseSpeed: 3.5,
@@ -140,13 +140,13 @@ export const RACE_STATS = Object.freeze({
  * weight: peso relativo para el spawn aleatorio
  */
 export const POWERUP_TYPES = Object.freeze({
-  heal: { emoji: "❤️", color: "#ff5c5c", duration: 0, amount: 80, weight: 20 },
+  heal: { emoji: "❤️", color: "#ff5c5c", duration: 0, amount: 160, weight: 20 },
   speed: { emoji: "⚡", color: "#ffe14d", duration: 8000, amount: 1.5, weight: 16 },
   damage: { emoji: "💥", color: "#ff8c00", duration: 8000, amount: 6, weight: 14 },
   turn: { emoji: "🔄", color: "#6ec6ff", duration: 8000, amount: 1.5, weight: 12 },
   armor: { emoji: "🛡️", color: "#8ce0ff", duration: 8000, amount: 0.5, weight: 12 },
   slow: { emoji: "🐌", color: "#b388ff", duration: 8000, amount: 0.6, weight: 10, trap: true },
-  zap: { emoji: "💀", color: "#9e9e9e", duration: 0, amount: 40, weight: 10, trap: true },
+  zap: { emoji: "💀", color: "#9e9e9e", duration: 0, amount: 80, weight: 10, trap: true },
   time: { emoji: "⏰", color: "#ffd54f", duration: 0, amount: 5000, weight: 6 }
 });
 
