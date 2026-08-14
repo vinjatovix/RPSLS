@@ -534,6 +534,7 @@ class Game {
 // ====================
 
 document.addEventListener("DOMContentLoaded", () => {
+  if (window.__NO_AUTOSTART__) return;
   const panelToggle = document.querySelector(".panel-toggle");
   const controlsPanel = document.getElementById("controls-panel");
   panelToggle?.addEventListener("click", () => {
@@ -581,6 +582,20 @@ document.addEventListener("DOMContentLoaded", () => {
         menu.close();
       } else {
         menu.showPause(!!game?.progressManager?.isTeamChosen());
+      }
+    }
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!game) return;
+    if (document.hidden) {
+      game.paused = true;
+    } else {
+      // Evita el deltaTime gigante de la reanudación (rAF se detiene
+      // en segundo plano y Date.now() acumularía todo ese tiempo).
+      game.clock.reset();
+      if (!menu.isOpen()) {
+        game.paused = false;
       }
     }
   });

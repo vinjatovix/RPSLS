@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Balance Test - rock paper scissors</title>
+    <style>
+      :root {
+        --bg: #111318;
+        --panel: #1a1e26;
+        --border: #2a2f3a;
+        --text: #d7dbe2;
+        --muted: #7c8494;
+        --accent: #4f8cff;
+        --danger: #ff5c5c;
+        --ok: #43c67d;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 14px;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 28px 20px 60px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+      }
+      .sub {
+        color: var(--muted);
+        margin: 0 0 20px;
+        line-height: 1.5;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        align-items: flex-end;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 14px;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      input[type="number"] {
+        width: 90px;
+        padding: 6px 8px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font: inherit;
+      }
+      label.check {
+        flex-direction: row;
+        align-items: center;
+        align-self: flex-end;
+        padding-bottom: 7px;
+      }
+      button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        font: inherit;
+        cursor: pointer;
+        background: var(--accent);
+        color: #fff;
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      #btn-stop {
+        background: var(--danger);
+      }
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      progress {
+        flex: 1;
+        height: 12px;
+        accent-color: var(--accent);
+      }
+      #status-text {
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      #report {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px;
+        white-space: pre;
+        overflow-x: auto;
+        line-height: 1.55;
+        margin: 0;
+        min-height: 120px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>Balance test - rock paper scissors</h1>
+      <p class="sub">
+        Simula el motor real del juego sin renderizar. No toca tu save (storage aislado en memoria).
+        Por defecto: sin upgrades, sin powerups, sin capture.
+      </p>
+
+      <div class="controls">
+        <label>Runs <input id="cfg-runs" type="number" value="10" min="1" max="200" /></label>
+        <label>Niveles por run <input id="cfg-levels" type="number" value="100" min="1" max="2000" /></label>
+        <label>dt (ms) <input id="cfg-dt" type="number" value="16" min="4" max="64" /></label>
+        <label class="check"><input id="cfg-powerups" type="checkbox" /> Powerups</label>
+        <label class="check"><input id="cfg-capture" type="checkbox" /> Capture</label>
+        <button id="btn-run" type="button">Ejecutar</button>
+        <button id="btn-stop" type="button" disabled>Detener</button>
+      </div>
+
+      <div class="status">
+        <progress id="progress" max="100" value="0"></progress>
+        <span id="status-text">Listo</span>
+      </div>
+
+      <pre id="report"></pre>
+    </main>
+
+    <!-- Elementos que el constructor de Game espera (se mantienen ocultos) -->
+    <div hidden>
+      <canvas id="canvas1" width="640" height="384"></canvas>
+      <div id="score-list"></div>
+      <div id="round-info"></div>
+      <div id="shop-list"></div>
+      <div id="credits"></div>
+    </div>
+
+    <script type="module">
+      import { runCampaign, aggregateRuns, formatReport } from "../src/testing/balanceRunner.js";
+
+      const $ = id => document.getElementById(id);
+      const reportEl = $("report");
+      const statusEl = $("status-text");
+      const progressEl = $("progress");
+      const btnRun = $("btn-run");
+      const btnStop = $("btn-stop");
+
+      let cancelRequested = false;
+
+      btnRun.addEventListener("click", start);
+      btnStop.addEventListener("click", () => {
+        cancelRequested = true;
+      });
+
+      async function start() {
+        cancelRequested = false;
+        btnRun.disabled = true;
+        btnStop.disabled = false;
+        reportEl.textContent = "";
+
+        const runs = Math.max(1, +$("cfg-runs").value || 10);
+        const levels = Math.max(1, +$("cfg-levels").value || 100);
+        const dt = Math.max(4, +$("cfg-dt").value || 16);
+        const powerups = $("cfg-powerups").checked;
+        const capture = $("cfg-capture").checked;
+
+        const totalMatches = runs * levels;
+        const results = [];
+        const t0 = performance.now();
+        let doneMatches = 0;
+
+        for (let i = 0; i < runs; i++) {
+          let run;
+          try {
+            run = await runCampaign({
+              maxLevel: levels,
+              dt,
+              capture,
+              powerups,
+              onProgress: ({ match }) => {
+                if (cancelRequested) return true;
+                doneMatches = i * levels + Math.max(0, match - 1);
+                const pct = (doneMatches / totalMatches) * 100;
+                progressEl.value = pct;
+                statusEl.textContent = `Run ${i + 1}/${runs} · nivel ${match} · ${pct.toFixed(1)}%`;
+                return false;
+              }
+            });
+          } catch (err) {
+            statusEl.textContent = "Error: " + err.message;
+            console.error("[balance] error:", err);
+            break;
+          }
+          results.push(run);
+          doneMatches = (i + 1) * levels;
+          progressEl.value = (doneMatches / totalMatches) * 100;
+          statusEl.textContent = `Run ${i + 1}/${runs} completado`;
+        }
+
+        const secs = ((performance.now() - t0) / 1000).toFixed(1);
+        if (results.length) {
+          const agg = aggregateRuns(results);
+          reportEl.textContent = formatReport(agg, { thresholdPp: 5 });
+          console.log("[balance] aggregate:", JSON.stringify(agg, null, 2));
+          console.log("[balance] runs:", JSON.stringify(results, null, 2));
+        }
+        statusEl.textContent =
+          `${results.length} runs en ${secs}s` +
+          (cancelRequested ? " (cancelado)" : "") +
+          (powerups || capture ? ` · con${powerups ? " powerups" : ""}${capture ? " + capture" : ""}` : "");
+        btnRun.disabled = false;
+        btnStop.disabled = true;
+      }
+    </script>
+  </body>
+</html>

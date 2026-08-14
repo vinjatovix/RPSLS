@@ -69,12 +69,13 @@ export class MenuManager {
     return el;
   }
 
-  #makeButton({ label, className = "", onClick }) {
-    const el = this.#el("button", `menu-btn ${className}`.trim());
-    el.type = "button";
-    el.textContent = label;
-    el.addEventListener("click", onClick);
-    return el;
+  #makeButton({ label, className = "", onClick, disabled = false }) {
+    const btn = this.#el("button", `menu-btn ${className}`.trim());
+    btn.type = "button";
+    btn.textContent = label;
+    if (disabled) btn.disabled = true;
+    btn.addEventListener("click", onClick);
+    return btn;
   }
 
   #render(title, bodyNode, buttons) {
@@ -118,23 +119,79 @@ export class MenuManager {
   }
 
   #showTeam() {
+    this.pendingTeam = null;
+    const wrap = this.#el("div", "team-pick-wrap");
     const grid = this.#el("div", "team-pick-grid");
-    for (const [team, stats] of Object.entries(RACE_STATS)) {
+    const details = this.#el("div", "team-details");
+
+    const teams = Object.entries(RACE_STATS);
+    for (const [team, stats] of teams) {
       const btn = this.#el("button", "team-btn");
       btn.type = "button";
       btn.dataset.team = team;
       btn.innerHTML = `<span class="team-emoji">${stats.emoji}</span>${team}`;
+      btn.addEventListener("mouseenter", () => this.#renderTeamInfo(details, team));
+      btn.addEventListener("focus", () => this.#renderTeamInfo(details, team));
       btn.addEventListener("click", () => {
-        if (this.#game()?.progressManager?.selectTeam(team)) {
-          this.#showLevel();
-        }
+        this.pendingTeam = team;
+        grid.querySelectorAll(".team-btn").forEach(b => b.classList.toggle("selected", b === btn));
+        this.#renderTeamInfo(details, team);
+        if (this.elegirBtn) this.elegirBtn.disabled = false;
       });
       grid.appendChild(btn);
     }
 
-    this.#render("👥 Elige tu equipo", grid, [
-      { label: "Cancelar", onClick: () => this.close() }
+    wrap.appendChild(grid);
+    wrap.appendChild(details);
+    this.#renderTeamInfo(details, teams[0][0]);
+
+    this.#render("👥 Elige tu equipo", wrap, [
+      {
+        label: "Elegir",
+        className: "primary js-elegir",
+        disabled: true,
+        onClick: () => {
+          if (this.pendingTeam && this.#game()?.progressManager?.selectTeam(this.pendingTeam)) {
+            this.#showLevel();
+          }
+        }
+      },
+      { label: "Atrás", onClick: () => this.close() }
     ]);
+
+    this.elegirBtn = this.actionsEl.querySelector(".js-elegir");
+  }
+
+  /**
+   * Ficha de una raza: descripción, ventajas (a quién gana),
+   * desventajas (quién le gana) y stats. Los depredadores se
+   * calculan recorriendo RACE_STATS para no duplicar datos.
+   */
+  #renderTeamInfo(container, team) {
+    const stats = RACE_STATS[team];
+    if (!stats) return;
+    const predators = Object.keys(RACE_STATS).filter(t => RACE_STATS[t].aim.includes(team));
+    const withEmoji = t => `${RACE_STATS[t].emoji} ${t}`;
+    const m = stats.movement;
+
+    container.innerHTML = `
+      <div class="team-details-head">
+        <span class="team-emoji">${stats.emoji}</span>
+        <strong>${team}</strong>
+        ${stats.description ? `<span class="team-details-desc">${stats.description}</span>` : ""}
+      </div>
+      <div class="team-details-row">
+        <span class="team-details-label">Gana a:</span>
+        <span>${stats.aim.map(withEmoji).join(" · ")}</span>
+      </div>
+      <div class="team-details-row">
+        <span class="team-details-label">Le ganan:</span>
+        <span>${predators.map(withEmoji).join(" · ") || "—"}</span>
+      </div>
+      <div class="team-details-row">
+        <span class="team-details-label">Stats:</span>
+        <span>Vida ${stats.health.max} · Daño ${stats.damage.amount} · Vel ${m.maxSpeed} · Giro ${m.rotationSpeed}</span>
+      </div>`;
   }
 
   #showLevel() {

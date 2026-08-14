@@ -19,4 +19,13 @@ export class Clock {
     this.lastTime = now;
     return this.deltaTime;
   }
+
+  /**
+   * Reanudar el reloj desde cero (evita deltas gigantes tras
+   * volver el foco al navegador).
+   */
+  reset() {
+    this.lastTime = Date.now();
+    this.deltaTime = 0;
+  }
 }

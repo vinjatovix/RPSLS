@@ -486,6 +486,62 @@ kbd {
   box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);
 }
 
+.team-pick-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.team-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.55rem 0.7rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgb(78, 77, 77);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: rgb(190, 190, 190);
+  min-height: 5.5rem;
+}
+
+.team-details-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.team-details-head .team-emoji {
+  font-size: 1.1rem;
+}
+
+.team-details-head strong {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+
+.team-details-desc {
+  color: rgb(150, 150, 150);
+  font-size: 0.75rem;
+}
+
+.team-details-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.team-details-label {
+  min-width: 5rem;
+  color: rgb(120, 120, 130);
+}
+
+.menu-btn[disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .level-select-menu {
   display: flex;
   align-items: center;
