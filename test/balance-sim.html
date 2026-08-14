@@ -134,6 +134,16 @@
         <button id="btn-stop" type="button" disabled>Detener</button>
       </div>
 
+      <div class="controls">
+        <span class="sub" style="align-self:center;margin:0">Diagnóstico</span>
+        <label>Seeds 1v1 <input id="cfg-seeds" type="number" value="12" min="1" max="100" /></label>
+        <button id="btn-matchup" type="button">Matchup 1v1</button>
+        <label>Runs cortos <input id="sweep-runs" type="number" value="1" min="1" max="20" /></label>
+        <label>Niveles <input id="sweep-levels" type="number" value="60" min="10" max="500" /></label>
+        <label>Perturbación % <input id="sweep-pct" type="number" value="15" min="1" max="100" /></label>
+        <button id="btn-sweep" type="button">Barrido de sensibilidad</button>
+      </div>
+
       <div class="status">
         <progress id="progress" max="100" value="0"></progress>
         <span id="status-text">Listo</span>
@@ -152,33 +162,53 @@
     </div>
 
     <script type="module">
-      import { runCampaign, aggregateRuns, formatReport } from "../src/testing/balanceRunner.js";
+      import { runCampaign, aggregateRuns, formatReport, TEAMS } from "../src/testing/balanceRunner.js";
+      import { runMatchupSim, formatMatchupReport } from "../src/testing/matchupSim.js";
+      import { RACE_STATS, GAME_CONFIG } from "../src/config/gameConfig.js";
 
-      const $ = id => document.getElementById(id);
-      const reportEl = $("report");
-      const statusEl = $("status-text");
-      const progressEl = $("progress");
-      const btnRun = $("btn-run");
-      const btnStop = $("btn-stop");
+      const el = id => document.getElementById(id);
+      const reportEl = el("report");
+      const statusEl = el("status-text");
+      const progressEl = el("progress");
+      const btnRun = el("btn-run");
+      const btnStop = el("btn-stop");
+      const btnMatchup = el("btn-matchup");
+      const btnSweep = el("btn-sweep");
 
       let cancelRequested = false;
+      let busy = false;
 
-      btnRun.addEventListener("click", start);
+      function setBusy(state) {
+        busy = state;
+        btnRun.disabled = state;
+        btnStop.disabled = !state;
+        btnMatchup.disabled = state;
+        btnSweep.disabled = state;
+      }
+
+      btnRun.addEventListener("click", startCampaign);
+      btnMatchup.addEventListener("click", runMatchup);
+      btnSweep.addEventListener("click", runSweep);
       btnStop.addEventListener("click", () => {
         cancelRequested = true;
       });
 
-      async function start() {
+      function isCancelled() {
+        if (!cancelRequested) return false;
+        statusEl.textContent = "Cancelado";
+        return true;
+      }
+
+      async function startCampaign() {
         cancelRequested = false;
-        btnRun.disabled = true;
-        btnStop.disabled = false;
+        setBusy(true);
         reportEl.textContent = "";
 
-        const runs = Math.max(1, +$("cfg-runs").value || 10);
-        const levels = Math.max(1, +$("cfg-levels").value || 100);
-        const dt = Math.max(4, +$("cfg-dt").value || 16);
-        const powerups = $("cfg-powerups").checked;
-        const capture = $("cfg-capture").checked;
+        const runs = Math.max(1, +el("cfg-runs").value || 10);
+        const levels = Math.max(1, +el("cfg-levels").value || 100);
+        const dt = Math.max(4, +el("cfg-dt").value || 16);
+        const powerups = el("cfg-powerups").checked;
+        const capture = el("cfg-capture").checked;
 
         const totalMatches = runs * levels;
         const results = [];
@@ -207,6 +237,7 @@
             console.error("[balance] error:", err);
             break;
           }
+          if (isCancelled()) break;
           results.push(run);
           doneMatches = (i + 1) * levels;
           progressEl.value = (doneMatches / totalMatches) * 100;
@@ -224,8 +255,173 @@
           `${results.length} runs en ${secs}s` +
           (cancelRequested ? " (cancelado)" : "") +
           (powerups || capture ? ` · con${powerups ? " powerups" : ""}${capture ? " + capture" : ""}` : "");
-        btnRun.disabled = false;
-        btnStop.disabled = true;
+        cancelRequested = false;
+        setBusy(false);
+      }
+
+      function runMatchup() {
+        const seeds = Math.max(1, +el("cfg-seeds").value || 12);
+        statusEl.textContent = `Matchup 1v1 con ${seeds} semillas...`;
+        const res = runMatchupSim({ seeds });
+        reportEl.textContent = formatMatchupReport(res);
+        console.log("[balance] matchup:", JSON.stringify(res, null, 2));
+        statusEl.textContent = `Matchup 1v1 listo (${seeds} semillas)`;
+      }
+
+      // ---------- Barrido de sensibilidad ----------
+
+      const SWEEP_STAT_PATHS = [
+        ["health", "health.max"],
+        ["damage", "damage.amount"],
+        ["maxSpeed", "movement.maxSpeed"],
+        ["rotationSpeed", "movement.rotationSpeed"]
+      ];
+
+      function readPath(obj, path) {
+        return path.split(".").reduce((o, k) => o[k], obj);
+      }
+      function writePath(obj, path, value) {
+        const parts = path.split(".");
+        const last = parts.pop();
+        const target = parts.reduce((o, k) => o[k], obj);
+        target[last] = value;
+      }
+
+      async function runShort(runs, levels, dt, onProgress) {
+        const results = [];
+        for (let i = 0; i < runs; i++) {
+          results.push(await runCampaign({ maxLevel: levels, dt, onProgress }));
+          if (cancelRequested) break;
+        }
+        return results.length ? aggregateRuns(results) : null;
+      }
+
+      function winRates(agg) {
+        const out = {};
+        if (agg) for (const team of TEAMS) out[team] = agg.teams[team].winRate;
+        return out;
+      }
+
+      function labelOf(cfg) {
+        if (cfg.timer === "base") return `timer.base ${cfg.dir > 0 ? "+" : ""}${cfg.dir * cfg.pct}%`;
+        if (cfg.timer === "growth") return `timer.growth ${cfg.dir > 0 ? "+" : ""}${cfg.dir * cfg.pct}%`;
+        return `${cfg.team}.${cfg.name} ${cfg.dir > 0 ? "+" : ""}${cfg.dir * cfg.pct}%`;
+      }
+
+      async function runSweep() {
+        cancelRequested = false;
+        setBusy(true);
+        reportEl.textContent = "";
+
+        const runs = Math.max(1, +el("sweep-runs").value || 1);
+        const levels = Math.max(10, +el("sweep-levels").value || 60);
+        const dt = Math.max(4, +el("cfg-dt").value || 16);
+        const pct = Math.max(1, +el("sweep-pct").value || 15);
+
+        statusEl.textContent = "Baseline...";
+        progressEl.value = 0;
+        const base = winRates(await runShort(runs, levels, dt));
+        if (!base) {
+          statusEl.textContent = "Cancelado";
+          setBusy(false);
+          return;
+        }
+
+        const baseline = {};
+        for (const team of TEAMS)
+          for (const [name, path] of SWEEP_STAT_PATHS)
+            baseline[`${team}.${path}`] = readPath(RACE_STATS[team], path);
+        const timerBase = GAME_CONFIG.mechanics.matchTimeBaseMs;
+        const timerGrowth = GAME_CONFIG.mechanics.matchTimeGrowthMs;
+
+        const configs = [];
+        for (const team of TEAMS)
+          for (const [name, path] of SWEEP_STAT_PATHS)
+            for (const dir of [-1, 1]) configs.push({ team, name, path, dir, pct });
+        for (const timer of ["base", "growth"]) for (const dir of [-1, 1]) configs.push({ timer, dir, pct });
+
+        const rows = [];
+        for (let i = 0; i < configs.length; i++) {
+          const cfg = configs[i];
+          if (isCancelled()) break;
+          statusEl.textContent = `Barrido ${i + 1}/${configs.length} · ${labelOf(cfg)}`;
+          progressEl.value = (i / configs.length) * 100;
+
+          if (cfg.timer === "base") {
+            GAME_CONFIG.mechanics.matchTimeBaseMs = Math.max(1000, timerBase * (1 + (cfg.dir * pct) / 100));
+          } else if (cfg.timer === "growth") {
+            GAME_CONFIG.mechanics.matchTimeGrowthMs = Math.max(0, timerGrowth * (1 + (cfg.dir * pct) / 100));
+          } else {
+            const cur = readPath(RACE_STATS[cfg.team], cfg.path);
+            writePath(RACE_STATS[cfg.team], cfg.path, Math.max(0.05, cur * (1 + (cfg.dir * pct) / 100)));
+          }
+
+          let rates = null;
+          try {
+            const agg = await runShort(runs, levels, dt, ({ match }) => {
+              if (cancelRequested) return true;
+              statusEl.textContent = `Barrido ${i + 1}/${configs.length} · ${labelOf(cfg)} · nivel ${match}`;
+              return false;
+            });
+            rates = winRates(agg);
+          } finally {
+            if (cfg.timer === "base") GAME_CONFIG.mechanics.matchTimeBaseMs = timerBase;
+            else if (cfg.timer === "growth") GAME_CONFIG.mechanics.matchTimeGrowthMs = timerGrowth;
+            else writePath(RACE_STATS[cfg.team], cfg.path, baseline[`${cfg.team}.${cfg.path}`]);
+          }
+
+          if (rates) rows.push({ cfg, rates, base });
+        }
+
+        if (rows.length) {
+          reportEl.textContent = formatSweepReport({ base, rows, pct });
+          console.log("[balance] sweep:", JSON.stringify({ base, rows }, null, 2));
+        }
+        statusEl.textContent = `Barrido: ${rows.length} configs` + (cancelRequested ? " (cancelado)" : "");
+        cancelRequested = false;
+        setBusy(false);
+      }
+
+      function formatSweepReport({ base, rows, pct }) {
+        const L = [];
+        const baseStr = Object.entries(base)
+          .map(([t, v]) => `${t} ${v.toFixed(1)}%`)
+          .join(", ");
+        L.push(`Barrido de sensibilidad ±${pct}% (baseline: ${baseStr})`);
+        L.push("Celdas: delta en puntos porcentuales respecto al baseline");
+        L.push("");
+        const rowCells = cells =>
+          cells.map((c, i) => (i === 0 ? c.padEnd(24) : c.padStart(9))).join(" ");
+        L.push(rowCells(["Perturbacion"].concat(TEAMS)));
+        for (const r of rows) {
+          const cells = [labelOf(r.cfg)];
+          for (const team of TEAMS) {
+            const d = (r.rates[team] ?? 0) - (r.base[team] ?? 0);
+            cells.push((d >= 0 ? "+" : "") + d.toFixed(1));
+          }
+          L.push(rowCells(cells));
+        }
+        L.push("");
+        L.push("Mejores palancas por equipo (% de cambio del stat por +1pp / -1pp):");
+        for (const team of TEAMS) {
+          const statRows = rows.filter(r => r.cfg.team);
+          const sorted = [...statRows].sort(
+            (a, b) => (b.rates[team] ?? 0) - (b.base[team] ?? 0) - ((a.rates[team] ?? 0) - (a.base[team] ?? 0))
+          );
+          const up = sorted[0];
+          const down = sorted[sorted.length - 1];
+          const upDelta = up ? (up.rates[team] ?? 0) - (up.base[team] ?? 0) : 0;
+          const downDelta = down ? (down.rates[team] ?? 0) - (down.base[team] ?? 0) : 0;
+          const upPct = upDelta !== 0 ? (pct / upDelta).toFixed(1) : "?";
+          const downPct = downDelta !== 0 ? (pct / Math.abs(downDelta)).toFixed(1) : "?";
+          L.push(
+            `  ${team.padEnd(10)} subir: ${up ? labelOf(up.cfg) : "-"} (~${upPct}%/pp)   ` +
+              `bajar: ${down ? labelOf(down.cfg) : "-"} (~${downPct}%/pp)`
+          );
+        }
+        L.push("");
+        L.push("Nota: el barrido restaura la config al final. Perturba un stat cada vez.");
+        return L.join("\n");
       }
     </script>
   </body>

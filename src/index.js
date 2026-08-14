@@ -373,7 +373,8 @@ class Game {
       this.height = height;
     }
 
-    this.timeLeft = 20000 + this.match * 1000 * 0.1;
+    this.timeLeft =
+      GAME_CONFIG.mechanics.matchTimeBaseMs + this.match * GAME_CONFIG.mechanics.matchTimeGrowthMs;
 
     this.timeSinceLastAction = 0;
     this.enemies = [];

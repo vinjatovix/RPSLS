@@ -124,7 +124,10 @@ export async function runCampaign({
     draws: 0,
     steps: 0,
     avgMatchMs: 0,
-    truncated: false
+    truncated: false,
+    final2: {},
+    final2Winners: {},
+    winByMode: {}
   };
   for (const team of TEAMS) {
     stats.wins[team] = 0;
@@ -132,6 +135,7 @@ export async function runCampaign({
     stats.deaths[team] = 0;
     stats.matrix[team] = {};
     for (const victim of TEAMS) stats.matrix[team][victim] = 0;
+    stats.winByMode[team] = { elimination: 0, countdown2: 0 };
   }
   for (let i = 0; i < nbuckets; i++) {
     const bucket = {};
@@ -156,20 +160,31 @@ export async function runCampaign({
 
   while (game.match <= maxLevel) {
     const matchBefore = game.match;
-    const timeLeftBefore = game.timeLeft;
+    const aliveBefore = [...new Set(game.enemies.filter(enemy => !enemy.dead).map(enemy => enemy.team))];
     game.update(dt);
     steps += 1;
     simMs += dt;
     if (game.match !== matchBefore) {
       matchDurations.push(simMs - matchStartMs);
       matchStartMs = simMs;
+      let mode;
       if (game.lastWin === "DRAW") {
         stats.endModes.draw += 1;
-      } else if (timeLeftBefore <= dt) {
-        stats.endModes.countdown2 += 1;
-      } else {
+        mode = "draw";
+      } else if (aliveBefore.length === 1) {
         stats.endModes.elimination += 1;
+        mode = "elimination";
+      } else {
+        stats.endModes.countdown2 += 1;
+        mode = "countdown2";
+        const pair = [...aliveBefore].sort();
+        const key = pair.join("~");
+        stats.final2[key] = (stats.final2[key] || 0) + 1;
+        stats.final2Winners[key] = stats.final2Winners[key] || {};
+        stats.final2Winners[key][game.lastWin] =
+          (stats.final2Winners[key][game.lastWin] || 0) + 1;
       }
+      if (game.lastWin !== "DRAW") stats.winByMode[game.lastWin][mode] += 1;
     }
     if (steps % CHUNK_STEPS === 0) {
       if (onProgress) {
@@ -238,12 +253,16 @@ export function aggregateRuns(runs) {
     endModes: { elimination: 0, countdown2: 0, draw: 0 },
     teams: {},
     buckets: [],
-    bucketSizes: []
+    bucketSizes: [],
+    final2: {},
+    final2Winners: {},
+    winByMode: {}
   };
 
   for (const team of TEAMS) {
     agg.matrix[team] = {};
     for (const victim of TEAMS) agg.matrix[team][victim] = 0;
+    agg.winByMode[team] = { elimination: 0, countdown2: 0 };
   }
   for (const run of runs) {
     for (const killer of TEAMS) {
@@ -254,6 +273,20 @@ export function aggregateRuns(runs) {
     agg.endModes.elimination += run.endModes?.elimination ?? 0;
     agg.endModes.countdown2 += run.endModes?.countdown2 ?? 0;
     agg.endModes.draw += run.endModes?.draw ?? 0;
+    for (const [key, count] of Object.entries(run.final2 ?? {})) {
+      agg.final2[key] = (agg.final2[key] || 0) + count;
+    }
+    for (const [key, winners] of Object.entries(run.final2Winners ?? {})) {
+      agg.final2Winners[key] = agg.final2Winners[key] || {};
+      for (const [team, count] of Object.entries(winners)) {
+        agg.final2Winners[key][team] = (agg.final2Winners[key][team] || 0) + count;
+      }
+    }
+    for (const team of TEAMS) {
+      const wm = run.winByMode?.[team] ?? { elimination: 0, countdown2: 0 };
+      agg.winByMode[team].elimination += wm.elimination ?? 0;
+      agg.winByMode[team].countdown2 += wm.countdown2 ?? 0;
+    }
   }
 
   for (const team of TEAMS) {
@@ -348,6 +381,40 @@ export function formatReport(agg, { thresholdPp = 5 } = {}) {
     L.push(
       `  Empate (tiempo agotado, >=3):   ${agg.endModes.draw} (${((agg.endModes.draw / totalEnd) * 100).toFixed(1)}%)`
     );
+  }
+
+  const winRows = Object.keys(agg.winByMode).filter(team => {
+    const wm = agg.winByMode[team];
+    return wm.elimination + wm.countdown2 > 0;
+  });
+  if (winRows.length) {
+    L.push("");
+    L.push("Wins por fin del match (descomposicion por equipo):");
+    for (const team of winRows) {
+      const wm = agg.winByMode[team];
+      const tot = wm.elimination + wm.countdown2;
+      L.push(
+        `  ${team.padEnd(10)} elim ${String(wm.elimination).padStart(5)} (${((wm.elimination / tot) * 100).toFixed(0).padStart(2)}%)  ` +
+          `countdown ${String(wm.countdown2).padStart(5)} (${((wm.countdown2 / tot) * 100).toFixed(0).padStart(2)}%)`
+      );
+    }
+  }
+
+  const final2Keys = Object.entries(agg.final2).sort((a, b) => b[1] - a[1]);
+  if (final2Keys.length) {
+    L.push("");
+    L.push("Parejas final-2 en countdown2 (quien llega al desempate y quien gana):");
+    L.push("  pareja" + " ".repeat(12) + "veces   ganador(es)");
+    for (const [key, count] of final2Keys) {
+      const winners = Object.entries(agg.final2Winners[key] || {})
+        .sort((a, b) => b[1] - a[1])
+        .map(([team, w]) => `${team}: ${w}`)
+        .join(", ");
+      const pct = agg.endModes.countdown2
+        ? ((count / agg.endModes.countdown2) * 100).toFixed(1)
+        : "0";
+      L.push(`  ${key.padEnd(16)} ${String(count).padStart(5)} (${pct.padStart(4)}%)  ${winners}`);
+    }
   }
 
   L.push("");

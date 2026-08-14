@@ -16,7 +16,9 @@ export const GAME_CONFIG = Object.freeze({
     capture: true,
     limitCanvas: false,
     outDies: true,
-    timeless: true
+    timeless: true,
+    matchTimeBaseMs: 10000,
+    matchTimeGrowthMs: 50
   },
   effects: {
     blood: true,
@@ -46,16 +48,16 @@ export const RACE_STATS = Object.freeze({
     color: "gray",
     description: "Tanque: mucha vida y buen daño",
     aim: ["scissors", "lizards"],
-    health: { current: 440, max: 440 },
-    damage: { amount: 8 },
+    health: { current: 460, max: 460 },
+    damage: { amount: 10 },
     movement: {
       baseSpeed: 3,
       maxSpeed: 15,
       minSpeed: 0.4,
       speedVariance: 2,
-      acceleration: 0.05,
+      acceleration: 0.07,
       deceleration: 0.06,
-      rotationSpeed: 0.014,
+      rotationSpeed: 0.016,
       rotationAcceleration: 0.0004
     }
   },
@@ -65,7 +67,7 @@ export const RACE_STATS = Object.freeze({
     color: "purple",
     description: "Equilibrado, el mejor giro",
     aim: ["rocks", "spocks"],
-    health: { current: 400, max: 400 },
+    health: { current: 370, max: 370 },
     damage: { amount: 8 },
     movement: {
       baseSpeed: 3.5,
@@ -74,7 +76,7 @@ export const RACE_STATS = Object.freeze({
       speedVariance: 3,
       acceleration: 0.06,
       deceleration: 0.06,
-      rotationSpeed: 0.022,
+      rotationSpeed: 0.015,
       rotationAcceleration: 0.0014
     }
   },
@@ -84,8 +86,8 @@ export const RACE_STATS = Object.freeze({
     color: "red",
     description: "Frágil, rápido y ligero",
     aim: ["papers", "lizards"],
-    health: { current: 340, max: 340 },
-    damage: { amount: 7 },
+    health: { current: 380, max: 380 },
+    damage: { amount: 9 },
     movement: {
       baseSpeed: 3.5,
       maxSpeed: 15,
@@ -93,7 +95,7 @@ export const RACE_STATS = Object.freeze({
       speedVariance: 3,
       acceleration: 0.06,
       deceleration: 0.06,
-      rotationSpeed: 0.014,
+      rotationSpeed: 0.015,
       rotationAcceleration: 0.0006
     }
   },
@@ -103,11 +105,11 @@ export const RACE_STATS = Object.freeze({
     color: "green",
     description: "La más rápida, frágil",
     aim: ["spocks", "papers"],
-    health: { current: 320, max: 320 },
-    damage: { amount: 9 },
+    health: { current: 360, max: 360 },
+    damage: { amount: 10 },
     movement: {
       baseSpeed: 5,
-      maxSpeed: 22,
+      maxSpeed: 21,
       minSpeed: 0.5,
       speedVariance: 4,
       acceleration: 0.09,
@@ -122,16 +124,16 @@ export const RACE_STATS = Object.freeze({
     color: "yellow",
     description: "Gran aceleración",
     aim: ["rocks", "scissors"],
-    health: { current: 380, max: 380 },
-    damage: { amount: 9 },
+    health: { current: 350, max: 350 },
+    damage: { amount: 10 },
     movement: {
       baseSpeed: 3.5,
       maxSpeed: 17,
       minSpeed: 0.5,
       speedVariance: 3,
-      acceleration: 0.16,
+      acceleration: 0.18,
       deceleration: 0.1,
-      rotationSpeed: 0.013,
+      rotationSpeed: 0.014,
       rotationAcceleration: 0.0006
     }
   }
