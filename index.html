@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>rock paper scissors</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <div class="game-zone">
+        <div class="match-banner" id="round-info"></div>
+        <canvas id="canvas1"></canvas>
+      </div>
+
+      <aside class="info-panel">
+        <section class="scoreboard">
+          <h2>Ranking</h2>
+          <div id="score-list"></div>
+        </section>
+
+        <section class="level-select">
+          <label for="start-level">Start Level</label>
+          <input type="number" id="start-level" min="0" max="2000" value="0" />
+          <button id="start-btn" type="button">Start</button>
+        </section>
+
+        <button class="panel-toggle" type="button">Controls</button>
+
+        <section class="controls-panel" id="controls-panel">
+          <div class="control-group">
+            <h4>FX</h4>
+            <ul>
+              <li><kbd>A</kbd> show dot</li>
+              <li><kbd>B</kbd> blood</li>
+              <li><kbd>S</kbd> snuff mode</li>
+              <li><kbd>D</kbd> debug</li>
+            </ul>
+          </div>
+          <div class="control-group">
+            <h4>Game</h4>
+            <ul>
+              <li><kbd>C</kbd> capture</li>
+              <li><kbd>L</kbd> limit area</li>
+              <li><kbd>O</kbd> out is death</li>
+              <li><kbd>T</kbd> timeless</li>
+              <li><kbd>X</kbd> persist draw</li>
+            </ul>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <script type="module" src="src/index.js"></script>
+  </body>
+</html>
