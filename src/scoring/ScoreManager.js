@@ -4,7 +4,8 @@
  */
 
 export class ScoreManager {
-  constructor() {
+  constructor({ eventBus = null } = {}) {
+    this.eventBus = eventBus;
     this.initialValues = { kills: 0, deaths: 0, score: 0, ratio: 0 };
     
     // Inicializar equipos con sus emojis
@@ -39,15 +40,31 @@ export class ScoreManager {
       this.teams[victimTeam].deaths > 0
         ? (this.teams[victimTeam].kills / this.teams[victimTeam].deaths).toFixed(2)
         : this.teams[victimTeam].kills;
+
+    this.eventBus?.emit("kill", { killerTeam, victimTeam });
   }
 
   /**
    * Añadir punto de victoria a un equipo
    */
-  addWin(team) {
+  addWin(team, { match = 0 } = {}) {
     if (this.teams[team]) {
       this.teams[team].score += 1;
     }
+
+    this.eventBus?.emit("match-win", {
+      team,
+      match,
+      mvp: this.isMvp(team)
+    });
+  }
+
+  /**
+   * ¿Es el equipo con más kills? (candidato a MVP del match)
+   */
+  isMvp(team) {
+    const maxKills = Math.max(...Object.values(this.teams).map(t => t.kills));
+    return maxKills > 0 && this.teams[team]?.kills === maxKills;
   }
 
   /**

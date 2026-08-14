@@ -2,9 +2,10 @@
  * Punto de entrada de la aplicación
  * Integra todos los módulos refactorizados
  * Mantiene la lógica original sin cambios de comportamiento
+ * Añade capa idle: razas diferenciadas, powerups, créditos y entrenamiento
  */
 
-import { GAME_CONFIG, RACE_STATS } from "./config/gameConfig.js";
+import { GAME_CONFIG, RACE_STATS, UPGRADES } from "./config/gameConfig.js";
 import { Clock } from "./core/Clock.js";
 import { EventBus } from "./core/EventBus.js";
 import { CanvasManager } from "./canvas/CanvasManager.js";
@@ -13,6 +14,10 @@ import { InputHandler } from "./input/InputHandler.js";
 import { LocalStorageAdapter } from "./storage/LocalStorageAdapter.js";
 import { OptionsManager } from "./options/OptionsManager.js";
 import { ScoreManager } from "./scoring/ScoreManager.js";
+import { ProgressManager } from "./meta/ProgressManager.js";
+import { ALL_RACES, RACE_CLASSES } from "./entities/races.js";
+import { PowerUp } from "./entities/PowerUp.js";
+import { PowerUpBurst } from "./particles/PowerUpEffects.js";
 
 // ====================
 // CLASES TEMPORALES
@@ -26,7 +31,7 @@ class ScorePanel {
     this.roundInfoEl = document.getElementById("round-info");
   }
 
-  update(scoreManager, match, timeLeft, mechanics, lastWin) {
+  update(scoreManager, match, timeLeft, mechanics, lastWin, credits) {
     const ranking = scoreManager.getRanking();
     this.scoreListEl.innerHTML = `
       <div class="score-head">
@@ -52,6 +57,7 @@ class ScorePanel {
     this.roundInfoEl.innerHTML = `
       <p><strong>Match:</strong> ${match}</p>
       ${lastWin ? `<p><strong>Last:</strong> ${lastWin}</p>` : ""}
+      <p><strong>Credits:</strong> ${credits} 💰</p>
       ${
         !mechanics.timeless
           ? `<p class="timer-active"><strong>Time:</strong> ${Math.round(timeLeft / 1000)}s</p>`
@@ -96,319 +102,6 @@ class DebugDrawer {
     this.ctx.fillText(`Snuff: ${this.options.effects.snuff}`, this.position, 9 * this.fontSize);
     this.ctx.fillText(`Dot: ${this.options.effects.dot}`, this.position, 10 * this.fontSize);
     this.ctx.restore();
-  }
-}
-
-class Enemy {
-  constructor({ game, x = null, y = null, angle = null }) {
-    this.emoji = "👾";
-    this.game = game;
-    this.ctx = this.game.canvasManager.getCtx();
-    const spawn = this.game.canvasManager.getRandomSpawnPoint();
-    this.x = x || spawn.x;
-    this.y = y || spawn.y;
-    this.speed = (Math.random() * 4 + 2) * this.game.canvasManager.getScale();
-    this.maxSpeed = 15 * (this.game.canvasManager.getScale() * 1.5);
-    this.minSpeed = 0.5;
-    this.acceleration = 0.06 * this.game.canvasManager.getScale() * 2;
-    this.deceleration = 0.06 * this.game.canvasManager.getScale();
-    this.angle = angle || Math.random() * 2 * Math.PI;
-    this.rotationSpeed = 0.0125 * (1 + this.game.canvasManager.getScale());
-    this.rotationAcceleration = 0.0005 * (1 + this.game.canvasManager.getScale());
-    this.width = 20;
-    this.height = 20;
-    this.vx = 0;
-    this.vy = 0;
-    this.aim = [Rock, Paper, Scissors, Lizard, Spock];
-    this.aimX = null;
-    this.aimY = null;
-    this.closest = null;
-    this.killedBy = null;
-    this.team = "enemies";
-    this.color = "black";
-    this.dead = false;
-    this.offScreen = false;
-    this.life = 200;
-    this.maxLife = 200;
-    this.damage = 5;
-  }
-
-  #kill(enemy) {
-    if (this.aim.includes(enemy.constructor)) {
-      enemy.life -= this.damage;
-      if (enemy.life <= 0) {
-        enemy.dead = true;
-        enemy.killedBy = this.constructor;
-        this.game.scoreManager.recordKill(this.team, enemy.team);
-      }
-    }
-  }
-
-  #checkCollision(allEnemies) {
-    for (const enemy of allEnemies) {
-      if (enemy !== this && CollisionDetector.checkOverlap(this, enemy)) {
-        this.#kill(enemy);
-      }
-    }
-  }
-
-  #checkPosition() {
-    const canvasSize = this.game.canvasManager.getSize();
-    this.offScreen = !CollisionDetector.isVisible(this.x, this.y, this.width, this.height, canvasSize);
-    if (this.offScreen && this.game.options.mechanics.outDies) {
-      this.dead = true;
-    }
-  }
-
-  #limitPosition() {
-    const clamped = this.game.canvasManager.clampPosition(this);
-    this.x = clamped.x;
-    this.y = clamped.y;
-  }
-
-  #limitSpeed() {
-    if (this.speed > this.maxSpeed) {
-      this.speed = this.maxSpeed;
-    }
-    if (this.speed < this.minSpeed) {
-      this.speed = this.minSpeed;
-    }
-  }
-
-  #calculateAngleDiff() {
-    const angleDiff = this.angle - Math.atan2(this.aimY - this.y, this.aimX - this.x);
-    if (angleDiff > Math.PI) {
-      return angleDiff - 2 * Math.PI;
-    }
-    if (angleDiff < -Math.PI) {
-      return angleDiff + 2 * Math.PI;
-    }
-    return angleDiff;
-  }
-
-  #calculateRotationSpeed(angleDiff) {
-    this.angle = angleDiff < 0 ? this.angle + this.rotationSpeed : this.angle - this.rotationSpeed;
-  }
-
-  #calculateSpeed(angleDiff) {
-    if (Math.abs(angleDiff) < Math.PI / 12) {
-      this.speed += this.acceleration;
-    }
-    if (Math.abs(angleDiff) > Math.PI / 8) {
-      this.speed -= this.deceleration;
-    }
-
-    this.#limitSpeed();
-  }
-
-  #goCenter() {
-    const { x, y } = this.game.canvasManager.getCenter();
-    this.aimX = x;
-    this.aimY = y;
-  }
-
-  #setTarget(allEnemies) {
-    this.closest = null;
-    for (const enemy of allEnemies) {
-      if (this.aim.includes(enemy.constructor) && !enemy.dead) {
-        if (this.closest) {
-          if (
-            Math.sqrt(Math.pow(this.x - enemy.x, 2) + Math.pow(this.y - enemy.y, 2)) <
-            Math.sqrt(Math.pow(this.x - this.closest.x, 2) + Math.pow(this.y - this.closest.y, 2))
-          ) {
-            this.closest = enemy;
-          }
-        } else {
-          this.closest = enemy;
-        }
-      }
-    }
-    if (this.closest) {
-      this.aimX = this.closest.x;
-      this.aimY = this.closest.y;
-    } else {
-      this.#goCenter();
-    }
-  }
-
-  move(deltaTime) {
-    const d = deltaTime / 30;
-    const angleDiff = this.#calculateAngleDiff();
-    this.#calculateRotationSpeed(angleDiff);
-    this.#calculateSpeed(angleDiff);
-    this.vx = Math.cos(this.angle) * this.speed;
-    this.vy = Math.sin(this.angle) * this.speed;
-    this.x += this.vx * d;
-    this.y += this.vy * d;
-
-    this.game.options.mechanics.limitCanvas && this.#limitPosition();
-  }
-
-  update(deltaTime, allEnemies) {
-    this.#checkPosition();
-    this.#setTarget(allEnemies);
-    this.move(deltaTime);
-    this.#checkCollision(allEnemies);
-  }
-
-  #drawRectangle() {
-    this.ctx.fillStyle = this.color;
-    this.ctx.fillRect(this.x, this.y, this.width, this.height);
-  }
-
-  #drawLineToAim() {
-    if (
-      this.aimX === this.game.canvasManager.getWidth() / 2 &&
-      this.aimY === this.game.canvasManager.getHeight() / 2
-    )
-      return;
-    this.ctx.strokeStyle = this.color;
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.x + this.width / 2, this.y + this.height / 2);
-    this.ctx.lineTo(this.aimX + this.width / 2, this.aimY + this.height / 2);
-    this.ctx.stroke();
-  }
-
-  #drawDirectionArrow() {
-    this.ctx.strokeStyle = this.color;
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.x + this.width / 2, this.y + this.height / 2);
-    this.ctx.lineTo(
-      this.x + this.width / 2 + Math.cos(this.angle) * this.width,
-      this.y + this.height / 2 + Math.sin(this.angle) * this.height
-    );
-    this.ctx.stroke();
-  }
-
-  #drawDirectionDot() {
-    this.ctx.fillStyle = this.color;
-    this.ctx.beginPath();
-    this.ctx.arc(
-      this.x + this.width / 2 + Math.cos(this.angle) * this.width,
-      this.y + this.height / 2 + Math.sin(this.angle) * this.height,
-      5,
-      0,
-      Math.PI * 2
-    );
-    this.ctx.fill();
-  }
-
-  #drawDirectionTriangle() {
-    this.ctx.save();
-    this.ctx.globalAlpha = 0.4;
-    this.ctx.fillStyle = this.color;
-    this.ctx.beginPath();
-    this.ctx.moveTo(
-      this.x + this.width / 2 + Math.cos(this.angle) * this.width,
-      this.y + this.height / 2 + Math.sin(this.angle) * this.height
-    );
-    this.ctx.lineTo(
-      this.x + this.width / 2 + Math.cos(this.angle + Math.PI / 4) * this.width,
-      this.y + this.height / 2 + Math.sin(this.angle + Math.PI / 4) * this.height
-    );
-    this.ctx.lineTo(
-      this.x + this.width / 2 + Math.cos(this.angle - Math.PI / 4) * this.width,
-      this.y + this.height / 2 + Math.sin(this.angle - Math.PI / 4) * this.height
-    );
-    this.ctx.fill();
-    this.ctx.restore();
-  }
-
-  #drawHealthBar() {
-    this.ctx.save();
-    this.ctx.fillStyle = "red";
-    this.ctx.fillRect(this.x, this.y - 10, this.width, 5);
-    this.ctx.fillStyle = "green";
-    this.ctx.fillRect(this.x, this.y - 10, (this.width * this.life) / this.maxLife, 5);
-    this.ctx.restore();
-  }
-
-  draw() {
-    this.#drawHealthBar();
-    this.game.options.effects.collider && this.#drawRectangle();
-    this.game.options.effects.debug && this.#drawLineToAim();
-    this.game.options.effects.arrow && this.#drawDirectionArrow();
-    this.game.options.effects.dot && this.#drawDirectionDot();
-    this.game.options.effects.triangle && this.#drawDirectionTriangle();
-    this.ctx.font = "20px Arial";
-    this.drawEmoji();
-  }
-
-  drawEmoji() {
-    this.ctx.save();
-    this.ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
-    this.ctx.rotate(this.angle + Math.PI / 2);
-    this.ctx.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
-    this.ctx.fillText(this.emoji, this.x - 2.5, this.y + 16);
-    this.ctx.restore();
-  }
-}
-
-class Rock extends Enemy {
-  constructor({ x, y, game }) {
-    super({ x, y, game });
-    this.emoji = "🪨";
-    this.team = "rocks";
-    this.aim = [Scissors, Lizard];
-    this.color = "gray";
-  }
-}
-
-class Paper extends Enemy {
-  constructor({ x, y, game }) {
-    super({ x, y, game });
-    this.emoji = "📄";
-    this.team = "papers";
-    this.aim = [Rock, Spock];
-    this.color = "purple";
-  }
-}
-
-class Scissors extends Enemy {
-  constructor({ x, y, game }) {
-    super({ x, y, game });
-    this.emoji = "✂️";
-    this.team = "scissors";
-    this.aim = [Paper, Lizard];
-    this.color = "red";
-  }
-
-  drawEmoji() {
-    this.ctx.save();
-    this.ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
-    this.ctx.rotate(this.angle - Math.PI / 2);
-    this.ctx.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
-    this.ctx.fillText(this.emoji, this.x - 2, this.y + 16);
-    this.ctx.restore();
-  }
-}
-
-class Lizard extends Enemy {
-  constructor({ x, y, game }) {
-    super({ x, y, game });
-    this.emoji = "🦎";
-    this.team = "lizards";
-    this.aim = [Spock, Paper];
-    this.color = "green";
-  }
-
-  drawEmoji() {
-    this.ctx.save();
-    this.ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
-    this.ctx.rotate(this.angle + Math.PI / 1.5);
-    this.ctx.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
-    this.ctx.fillText(this.emoji, this.x - 2, this.y + 16);
-    this.ctx.restore();
-  }
-}
-
-class Spock extends Enemy {
-  constructor({ x, y, game }) {
-    super({ x, y, game });
-    this.emoji = "🖖";
-    this.team = "spocks";
-    this.aim = [Rock, Scissors];
-    this.color = "yellow";
   }
 }
 
@@ -486,6 +179,12 @@ class ParticleManager {
     }
   }
 
+  powerUpBurst(x, y, color) {
+    for (let i = 0; i < 8; i++) {
+      this.addParticle(new PowerUpBurst({ ctx: this.ctx, x, y, color }));
+    }
+  }
+
   update(deltaTime) {
     for (const particle of this.particles) {
       particle.update(deltaTime);
@@ -497,6 +196,98 @@ class ParticleManager {
     for (const particle of this.particles) {
       particle.draw();
     }
+  }
+}
+
+// ====================
+// META-PROGRESIÓN (UI)
+// ====================
+
+class MetaPanel {
+  constructor({ progressManager, game }) {
+    this.progressManager = progressManager;
+    this.game = game;
+    this.teamButtonsEl = document.getElementById("team-buttons");
+    this.shopListEl = document.getElementById("shop-list");
+    this.creditsEl = document.getElementById("credits");
+
+    this.progressManager.eventBus.subscribe("credits-updated", () => this.render());
+    this.#buildTeamButtons();
+    this.render();
+  }
+
+  #buildTeamButtons() {
+    this.teamButtonsEl.innerHTML = "";
+    for (const [team, stats] of Object.entries(RACE_STATS)) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "team-btn";
+      btn.dataset.team = team;
+      btn.innerHTML = `<span class="team-emoji">${stats.emoji}</span>${team}`;
+      btn.addEventListener("click", () => {
+        if (this.progressManager.selectTeam(team)) {
+          this.game.onTeamChanged();
+          this.render();
+        }
+      });
+      this.teamButtonsEl.appendChild(btn);
+    }
+  }
+
+  render() {
+    const selected = this.progressManager.selectedTeam;
+    this.creditsEl.textContent = this.progressManager.credits;
+    this.teamButtonsEl.querySelectorAll(".team-btn").forEach(btn => {
+      btn.classList.toggle("selected", btn.dataset.team === selected);
+    });
+    this.#renderShop(selected);
+  }
+
+  #renderShop(selected) {
+    this.shopListEl.innerHTML = "";
+
+    const perRace = Object.entries(UPGRADES).filter(([, config]) => config.perRace);
+    const globalUpgrades = Object.entries(UPGRADES).filter(([, config]) => !config.perRace);
+
+    const raceHeader = document.createElement("div");
+    raceHeader.className = "shop-section-title";
+    raceHeader.textContent = `${RACE_STATS[selected].emoji} ${selected}`;
+    this.shopListEl.appendChild(raceHeader);
+
+    perRace.forEach(([key, config]) => {
+      this.#renderItem(this.shopListEl, key, config, selected);
+    });
+
+    const globalHeader = document.createElement("div");
+    globalHeader.className = "shop-section-title";
+    globalHeader.textContent = "Global";
+    this.shopListEl.appendChild(globalHeader);
+
+    globalUpgrades.forEach(([key, config]) => {
+      this.#renderItem(this.shopListEl, key, config, null);
+    });
+  }
+
+  #renderItem(container, key, config, team) {
+    const level = this.progressManager.getUpgradeLevel(key, team);
+    const cost = this.progressManager.getUpgradeCost(key, team);
+    const canAfford = this.progressManager.credits >= cost;
+
+    const item = document.createElement("div");
+    item.className = "shop-item";
+    item.innerHTML = `
+      <span class="shop-emoji">${config.emoji}</span>
+      <div class="shop-info">
+        <span class="shop-name">${config.label}</span>
+        <span class="shop-desc">${config.description} · Lv.${level}</span>
+      </div>
+      <button type="button" class="shop-btn" ${canAfford ? "" : "disabled"}>${cost} 💰</button>
+    `;
+    item.querySelector(".shop-btn").addEventListener("click", () => {
+      this.progressManager.buyUpgrade(key, team);
+      this.render();
+    });
+    container.appendChild(item);
   }
 }
 
@@ -536,7 +327,7 @@ class Game {
     this.timeLeft = 10000;
     this.match = startLevel;
     this.enemiesQty = Math.floor(startLevel / 10) || 1;
-    this.scoreManager = new ScoreManager();
+    this.scoreManager = new ScoreManager({ eventBus: this.eventBus });
     this.scorePanel = new ScorePanel();
     this.enemies = [];
     this.lastWin = null;
@@ -544,6 +335,31 @@ class Game {
     this.destroyed = false;
     this.rafId = null;
 
+    // Capa idle
+    this.progressManager = new ProgressManager({
+      storageAdapter: this.storageAdapter,
+      eventBus: this.eventBus
+    });
+    this.metaPanel = new MetaPanel({
+      progressManager: this.progressManager,
+      game: this
+    });
+
+    this.gameTime = 0;
+    this.powerups = [];
+    this.powerupTimer = 6000 / this.progressManager.getPowerupLuck();
+    this.timeSinceLastAction = 0;
+    this.eventBus.subscribe("kill", () => {
+      this.timeSinceLastAction = 0;
+    });
+
+    this.#restart();
+  }
+
+  /**
+   * Al cambiar de equipo se reinicia el match para aplicar las mejoras
+   */
+  onTeamChanged() {
     this.#restart();
   }
 
@@ -576,28 +392,50 @@ class Game {
 
     this.timeLeft = 9000 + this.match * 1000 * 0.1;
 
+    this.timeSinceLastAction = 0;
     this.enemies = [];
+    const selectedTeam = this.progressManager.selectedTeam;
     for (let i = 0; i < this.enemiesQty; i++) {
-      [Rock, Paper, Scissors, Lizard, Spock].forEach(enemy => {
-        this.enemies.push(new enemy({ game: this, x: null, y: null }));
+      ALL_RACES.forEach(enemyClass => {
+        const modifiers =
+          enemyClass.teamName === selectedTeam
+            ? this.progressManager.getRaceModifiers(selectedTeam)
+            : null;
+        this.enemies.push(new enemyClass({ game: this, x: null, y: null, modifiers }));
       });
     }
+    this.powerups = [];
   }
 
   #captureEnemy(killed) {
-    if (killed.killedBy && killed.killedBy !== Enemy) {
+    if (killed.killedBy && RACE_CLASSES[killed.killedBy]) {
+      const enemyClass = RACE_CLASSES[killed.killedBy];
+      const modifiers =
+        enemyClass.teamName === this.progressManager.selectedTeam
+          ? this.progressManager.getRaceModifiers(this.progressManager.selectedTeam)
+          : null;
       this.enemies.push(
-        new killed.killedBy({
+        new enemyClass({
           x: killed.x,
           y: killed.y,
           game: this,
-          angle: killed.angle
+          angle: killed.angle,
+          modifiers
         })
       );
     }
   }
 
   update(deltaTime) {
+    const substeps = this.progressManager.getTimeCompression();
+    const step = deltaTime / substeps;
+    for (let i = 0; i < substeps; i++) {
+      this.#updateStep(step);
+    }
+  }
+
+  #updateStep(deltaTime) {
+    this.gameTime += deltaTime;
     this.options.update();
     const alive = this.enemies.filter(enemy => !enemy.dead).map(enemy => enemy.team);
     const unique = [...new Set(alive)];
@@ -610,8 +448,16 @@ class Game {
       this.timeLeft -= deltaTime;
     }
 
+    // Anti-estancamiento: si no hay kills y quedan 3+ equipos,
+    // fuerza una cuenta atrás corta para que el match siempre fluya
+    this.timeSinceLastAction += deltaTime;
+    if (this.timeSinceLastAction > 20000 && unique.length > 2) {
+      this.options.setMechanic("timeless", false);
+      this.timeLeft = Math.min(this.timeLeft, 6000);
+    }
+
     if (unique.length === 1) {
-      this.scoreManager.addWin(unique[0]);
+      this.scoreManager.addWin(unique[0], { match: this.match });
       this.lastWin = unique[0];
       this.#restart();
     }
@@ -620,12 +466,12 @@ class Game {
       if (unique.length === 2) {
         const team1 = this.enemies.filter(enemy => enemy.team === unique[0]);
         const team2 = this.enemies.filter(enemy => enemy.team === unique[1]);
-        if (team1[0].aim.includes(team2[0].constructor)) {
-          this.scoreManager.addWin(unique[1]);
+        if (team1[0].aim.includes(team2[0].team)) {
+          this.scoreManager.addWin(unique[1], { match: this.match });
           this.lastWin = unique[1];
         }
-        if (team2[0].aim.includes(team1[0].constructor)) {
-          this.scoreManager.addWin(unique[0]);
+        if (team2[0].aim.includes(team1[0].team)) {
+          this.scoreManager.addWin(unique[0], { match: this.match });
           this.lastWin = unique[0];
         }
       } else {
@@ -641,14 +487,40 @@ class Game {
       this.particles.collision(killed.x, killed.y);
     }
     this.enemies = this.enemies.filter(enemy => !enemy.dead);
+    this.#updatePowerups(deltaTime);
     for (const enemy of this.enemies) {
       enemy.update(deltaTime, this.enemies);
     }
     this.particles.update(deltaTime);
   }
 
+  #updatePowerups(deltaTime) {
+    this.powerupTimer -= deltaTime;
+    if (this.powerupTimer <= 0 && this.powerups.length < 8) {
+      this.powerups.push(new PowerUp({ game: this }));
+      this.powerupTimer = 6000 / this.progressManager.getPowerupLuck();
+    }
+
+    for (const powerup of this.powerups) {
+      if (powerup.isExpired()) {
+        powerup.dead = true;
+        continue;
+      }
+      for (const enemy of this.enemies) {
+        if (!enemy.dead && CollisionDetector.checkOverlap(powerup, enemy)) {
+          powerup.applyTo(enemy);
+          break;
+        }
+      }
+    }
+    this.powerups = this.powerups.filter(powerup => !powerup.dead);
+  }
+
   draw() {
     this.particles.draw();
+    for (const powerup of this.powerups) {
+      powerup.draw();
+    }
     this.debugDrawer.draw();
     for (const enemy of this.enemies) {
       enemy.draw();
@@ -658,7 +530,8 @@ class Game {
       this.match,
       this.timeLeft,
       this.options.mechanics,
-      this.lastWin
+      this.lastWin,
+      this.progressManager.credits
     );
   }
 
@@ -711,3 +584,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   startBtn.addEventListener("click", start);
 });
+
+export { Game };

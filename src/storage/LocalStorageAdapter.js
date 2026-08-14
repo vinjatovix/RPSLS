@@ -6,26 +6,29 @@
 
 export class LocalStorageAdapter {
   constructor(key = "gameOptions-v2") {
-    this.key = key;
+    this.defaultKey = key;
   }
 
   /**
-   * Guardar opciones en localStorage
+   * Guardar datos en localStorage
+   * @param {Object} data - Datos a guardar
+   * @param {string} [key] - Clave (por defecto usa la del constructor)
    */
-  save(data) {
+  save(data, key = this.defaultKey) {
     try {
-      localStorage.setItem(this.key, JSON.stringify(data));
+      localStorage.setItem(key, JSON.stringify(data));
     } catch (error) {
       console.warn("Error saving to localStorage:", error);
     }
   }
 
   /**
-   * Cargar opciones desde localStorage
+   * Cargar datos desde localStorage
+   * @param {string} [key] - Clave (por defecto usa la del constructor)
    */
-  load() {
+  load(key = this.defaultKey) {
     try {
-      const data = localStorage.getItem(this.key);
+      const data = localStorage.getItem(key);
       return data ? JSON.parse(data) : null;
     } catch (error) {
       console.warn("Error loading from localStorage:", error);
@@ -35,10 +38,11 @@ export class LocalStorageAdapter {
 
   /**
    * Limpiar localStorage
+   * @param {string} [key] - Clave (por defecto usa la del constructor)
    */
-  clear() {
+  clear(key = this.defaultKey) {
     try {
-      localStorage.removeItem(this.key);
+      localStorage.removeItem(key);
     } catch (error) {
       console.warn("Error clearing localStorage:", error);
     }

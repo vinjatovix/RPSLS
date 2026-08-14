@@ -80,11 +80,153 @@ body {
 }
 
 .scoreboard h2,
-.stats h3 {
+.stats h3,
+.team-select h2,
+.shop h2 {
   font-size: 1rem;
   margin-bottom: 0.5rem;
   text-transform: uppercase;
   color: rgb(160, 160, 160);
+}
+
+/* --- Selección de equipo --- */
+
+.team-buttons {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+}
+
+.team-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.4rem 0.2rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgb(78, 77, 77);
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.team-btn .team-emoji {
+  font-size: 1.1rem;
+}
+
+.team-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.team-btn.selected {
+  border-color: #ffcc00;
+  background: rgba(255, 204, 0, 0.12);
+  box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);
+}
+
+.credits-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  background: rgba(255, 200, 0, 0.08);
+  border: 1px solid rgba(255, 200, 0, 0.4);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.credits-label {
+  color: rgb(160, 160, 160);
+  text-transform: uppercase;
+  font-size: 0.65rem;
+}
+
+.credits-value {
+  font-size: 1.15rem;
+  color: #ffd54f;
+  margin-left: auto;
+}
+
+/* --- Shop / entrenamiento --- */
+
+.shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.shop-section-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgb(140, 140, 140);
+  border-bottom: 1px solid rgb(78, 77, 77);
+  margin: 0.4rem 0 0.2rem;
+  padding-bottom: 0.2rem;
+}
+
+.shop-section-title:first-child {
+  margin-top: 0;
+}
+
+.shop-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+.shop-item:hover {
+  border-color: rgb(78, 77, 77);
+}
+
+.shop-emoji {
+  font-size: 1rem;
+}
+
+.shop-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.shop-name {
+  font-size: 0.8rem;
+}
+
+.shop-desc {
+  font-size: 0.65rem;
+  color: rgb(140, 140, 140);
+}
+
+.shop-btn {
+  padding: 0.35rem 0.5rem;
+  background: rgba(255, 200, 0, 0.2);
+  border: 1px solid rgba(255, 200, 0, 0.5);
+  color: #ffd54f;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.shop-btn:hover:not(:disabled) {
+  background: rgba(255, 200, 0, 0.35);
+}
+
+.shop-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .score-item,
