@@ -15,30 +15,20 @@
       </div>
 
       <aside class="info-panel">
-        <section class="team-select" id="team-select">
-          <h2>Tu equipo</h2>
-          <div class="team-buttons" id="team-buttons"></div>
-          <div class="credits-bar">
-            <span class="credits-label">Créditos</span>
-            <strong class="credits-value" id="credits">0</strong>
-            <span class="credits-emoji">💰</span>
-          </div>
-        </section>
-
-        <section class="shop">
-          <h2>Entrenamiento</h2>
-          <div class="shop-list" id="shop-list"></div>
-        </section>
-
         <section class="scoreboard">
           <h2>Ranking</h2>
           <div id="score-list"></div>
         </section>
 
-        <section class="level-select">
-          <label for="start-level">Start Level</label>
-          <input type="number" id="start-level" min="0" max="2000" value="0" />
-          <button id="start-btn" type="button">Start</button>
+        <div class="credits-bar">
+          <span class="credits-label">Créditos</span>
+          <strong class="credits-value" id="credits">0</strong>
+          <span class="credits-emoji">💰</span>
+        </div>
+
+        <section class="shop">
+          <h2>Entrenamiento</h2>
+          <div class="shop-list" id="shop-list"></div>
         </section>
 
         <button class="panel-toggle" type="button">Controls</button>
@@ -65,6 +55,14 @@
           </div>
         </section>
       </aside>
+    </div>
+
+    <div class="menu-overlay" id="menu-overlay" hidden>
+      <div class="menu-modal">
+        <h2 id="menu-title">Pausa</h2>
+        <div id="menu-body"></div>
+        <div id="menu-actions"></div>
+      </div>
     </div>
 
     <script type="module" src="src/index.js"></script>

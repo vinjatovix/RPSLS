@@ -128,23 +128,6 @@ body {
   box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);
 }
 
-.team-select.awaiting {
-  border: 1px dashed #ffcc00;
-  border-radius: 8px;
-  padding: 0.6rem;
-  animation: team-await-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes team-await-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 rgba(255, 204, 0, 0);
-  }
-  50% {
-    box-shadow: 0 0 12px rgba(255, 204, 0, 0.35);
-  }
-}
-
 .credits-bar {
   display: flex;
   align-items: center;
@@ -412,4 +395,123 @@ kbd {
     max-height: 250px;
     padding: 0.75rem;
   }
+}
+
+/* --- Menú de pausa / nueva partida --- */
+
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.menu-overlay[hidden] {
+  display: none;
+}
+
+.menu-modal {
+  background: rgb(27, 27, 27);
+  border: 1px solid rgb(78, 77, 77);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  min-width: 340px;
+  max-width: 90vw;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.menu-modal h2 {
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.menu-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+  color: rgb(190, 190, 190);
+  font-size: 0.9rem;
+}
+
+.menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.menu-btn {
+  padding: 0.55rem 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgb(78, 77, 77);
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.menu-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.menu-btn.primary {
+  border-color: #ffcc00;
+  background: rgba(255, 204, 0, 0.12);
+  color: #ffcc00;
+}
+
+.menu-btn.primary:hover {
+  background: rgba(255, 204, 0, 0.22);
+}
+
+.team-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.team-pick-grid .team-btn.selected {
+  border-color: #ffcc00;
+  background: rgba(255, 204, 0, 0.12);
+  box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);
+}
+
+.level-select-menu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.level-select-menu label {
+  font-size: 0.85rem;
+  color: rgb(190, 190, 190);
+}
+
+.level-input {
+  width: 110px;
+  padding: 0.4rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgb(78, 77, 77);
+  border-radius: 6px;
+  color: inherit;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.menu-hint {
+  margin-top: 0.6rem;
+  font-size: 0.75rem;
+  color: rgb(140, 140, 140);
 }

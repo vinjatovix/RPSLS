@@ -18,6 +18,7 @@ import { ProgressManager } from "./meta/ProgressManager.js";
 import { ALL_RACES, RACE_CLASSES } from "./entities/races.js";
 import { PowerUp } from "./entities/PowerUp.js";
 import { PowerUpBurst } from "./particles/PowerUpEffects.js";
+import { MenuManager } from "./ui/MenuManager.js";
 
 // ====================
 // CLASES TEMPORALES
@@ -209,42 +210,16 @@ class MetaPanel {
   constructor({ progressManager, game }) {
     this.progressManager = progressManager;
     this.game = game;
-    this.teamButtonsEl = document.getElementById("team-buttons");
-    this.teamSelectEl = document.getElementById("team-select");
     this.shopListEl = document.getElementById("shop-list");
     this.creditsEl = document.getElementById("credits");
 
     this.progressManager.eventBus.subscribe("credits-updated", () => this.render());
-    this.#buildTeamButtons();
     this.render();
-  }
-
-  #buildTeamButtons() {
-    this.teamButtonsEl.innerHTML = "";
-    for (const [team, stats] of Object.entries(RACE_STATS)) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "team-btn";
-      btn.dataset.team = team;
-      btn.innerHTML = `<span class="team-emoji">${stats.emoji}</span>${team}`;
-      btn.addEventListener("click", () => {
-        if (this.progressManager.selectTeam(team)) {
-          this.game.onTeamChanged();
-          this.render();
-        }
-      });
-      this.teamButtonsEl.appendChild(btn);
-    }
   }
 
   render() {
     const selected = this.progressManager.selectedTeam;
-    const chosen = this.progressManager.isTeamChosen();
     this.creditsEl.textContent = this.progressManager.credits;
-    this.teamSelectEl?.classList.toggle("awaiting", !chosen);
-    this.teamButtonsEl.querySelectorAll(".team-btn").forEach(btn => {
-      btn.classList.toggle("selected", chosen && btn.dataset.team === selected);
-    });
     this.#renderShop(selected);
   }
 
@@ -354,6 +329,7 @@ class Game {
     this.powerups = [];
     this.powerupTimer = 6000 / this.progressManager.getPowerupLuck();
     this.timeSinceLastAction = 0;
+    this.paused = false;
     this.eventBus.subscribe("kill", () => {
       this.timeSinceLastAction = 0;
     });
@@ -434,7 +410,7 @@ class Game {
   }
 
   update(deltaTime) {
-    if (!this.progressManager.isTeamChosen()) return;
+    if (this.paused || !this.progressManager.isTeamChosen()) return;
     const substeps = this.progressManager.getTimeCompression();
     const step = deltaTime / substeps;
     for (let i = 0; i < substeps; i++) {
@@ -564,22 +540,19 @@ document.addEventListener("DOMContentLoaded", () => {
     controlsPanel.classList.toggle("collapsed");
   });
 
-  const startBtn = document.getElementById("start-btn");
-  const startLevelInput = document.getElementById("start-level");
-
   let game = null;
   let rafId = null;
 
-  const start = () => {
-    let startLevel = +startLevelInput.value;
-    if (startLevel < 0 || startLevel > 2000 || isNaN(startLevel)) {
-      startLevel = 0;
+  const start = (startLevel = 0) => {
+    let level = +startLevel;
+    if (level < 0 || level > 2000 || isNaN(level)) {
+      level = 0;
     }
 
     if (game) game.destroy();
     cancelAnimationFrame(rafId);
 
-    const instance = new Game({ startLevel });
+    const instance = new Game({ startLevel: level });
     game = instance;
 
     const animate = () => {
@@ -591,7 +564,26 @@ document.addEventListener("DOMContentLoaded", () => {
     animate();
   };
 
-  startBtn.addEventListener("click", start);
+  const menu = new MenuManager({
+    getGame: () => game,
+    onStart: start
+  });
+
+  start(0);
+
+  if (!game.progressManager.isTeamChosen()) {
+    menu.showPause(false);
+  }
+
+  window.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+      if (menu.isOpen()) {
+        menu.close();
+      } else {
+        menu.showPause(!!game?.progressManager?.isTeamChosen());
+      }
+    }
+  });
 });
 
 export { Game };
