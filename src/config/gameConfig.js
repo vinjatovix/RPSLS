@@ -18,7 +18,10 @@ export const GAME_CONFIG = Object.freeze({
     outDies: true,
     timeless: true,
     matchTimeBaseMs: 10000,
-    matchTimeGrowthMs: 50
+    matchTimeGrowthMs: 50,
+    ai: {
+      dangerRadius: 300
+    }
   },
   effects: {
     blood: true,
@@ -49,7 +52,7 @@ export const RACE_STATS = Object.freeze({
     description: "Tanque: mucha vida y buen daño",
     aim: ["scissors", "lizards"],
     health: { current: 460, max: 460 },
-    damage: { amount: 10 },
+    damage: { amount: 9 },
     movement: {
       baseSpeed: 3,
       maxSpeed: 15,

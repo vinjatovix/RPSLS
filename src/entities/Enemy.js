@@ -5,8 +5,19 @@
  * Aplica modifiers (mejoras del jugador) y buffs (powerups)
  */
 
-import { RACE_STATS } from "../config/gameConfig.js";
+import { RACE_STATS, GAME_CONFIG } from "../config/gameConfig.js";
 import { CollisionDetector } from "../canvas/geometry/CollisionDetector.js";
+
+/**
+ * Mapa estático: para cada equipo, qué equipos pueden dañarlo (predadores).
+ * Derivado una vez de RACE_STATS.aim (caza asimétrica).
+ */
+const PREDATORS = {};
+for (const team of Object.keys(RACE_STATS)) {
+  PREDATORS[team] = Object.keys(RACE_STATS).filter(predator =>
+    RACE_STATS[predator].aim.includes(team)
+  );
+}
 
 export class Enemy {
   constructor({ game, x = null, y = null, angle = null, modifiers = null }, team = "rocks") {
@@ -45,6 +56,8 @@ export class Enemy {
     this.killedBy = null;
     this.dead = false;
     this.offScreen = false;
+    this.fleeing = false;
+    this.fleeClampFrames = 0;
 
     this.maxLife = Math.round(stats.health.max * mods.hp);
     this.life = this.maxLife;
@@ -128,6 +141,34 @@ export class Enemy {
     this.y = clamped.y;
   }
 
+  #safeClamp() {
+    const { width, height } = this.game.canvasManager.getSize();
+    this.x = Math.min(Math.max(this.x, 2), width - this.width - 2);
+    this.y = Math.min(Math.max(this.y, 2), height - this.height - 2);
+  }
+
+  #nearEdge() {
+    const { width, height } = this.game.canvasManager.getSize();
+    const m = 40;
+    return (
+      this.x < m ||
+      this.x > width - this.width - m ||
+      this.y < m ||
+      this.y > height - this.height - m
+    );
+  }
+
+  #headingTowardEdge() {
+    const { width, height } = this.game.canvasManager.getSize();
+    const m = 40;
+    return (
+      (this.x < m && this.vx < 0) ||
+      (this.x > width - this.width - m && this.vx > 0) ||
+      (this.y < m && this.vy < 0) ||
+      (this.y > height - this.height - m && this.vy > 0)
+    );
+  }
+
   #limitSpeed() {
     const speedMult = this.getSpeedMultiplier();
     if (this.speed > this.maxSpeed * speedMult) {
@@ -172,6 +213,35 @@ export class Enemy {
     this.aimY = y;
   }
 
+  #flee(allEnemies) {
+    const radius = GAME_CONFIG.mechanics.ai.dangerRadius;
+    let threat = null;
+    for (const enemy of allEnemies) {
+      if (enemy.dead || !PREDATORS[this.team].includes(enemy.team)) continue;
+      const dx = this.x - enemy.x;
+      const dy = this.y - enemy.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < radius * radius && (!threat || d2 < threat.d2)) {
+        threat = { x: dx, y: dy, d2 };
+      }
+    }
+    if (!threat) return false;
+    const dist = Math.sqrt(threat.d2) || 1;
+    const ux = threat.x / dist;
+    const uy = threat.y / dist;
+    const { width, height } = this.game.canvasManager.getSize();
+    const margin = 30;
+    let tx = this.x + ux * radius;
+    let ty = this.y + uy * radius;
+    if (tx < margin) tx = margin + (margin - tx);
+    else if (tx > width - margin) tx = width - margin - (tx - (width - margin));
+    if (ty < margin) ty = margin + (margin - ty);
+    else if (ty > height - margin) ty = height - margin - (ty - (height - margin));
+    this.aimX = tx;
+    this.aimY = ty;
+    return true;
+  }
+
   #setTarget(allEnemies) {
     this.closest = null;
     for (const enemy of allEnemies) {
@@ -191,8 +261,11 @@ export class Enemy {
     if (this.closest) {
       this.aimX = this.closest.x;
       this.aimY = this.closest.y;
+      this.fleeing = false;
     } else {
-      this.#goCenter();
+      this.fleeing = this.#flee(allEnemies);
+      if (this.fleeing) this.fleeClampFrames = 60;
+      if (!this.fleeing) this.#goCenter();
     }
   }
 
@@ -206,7 +279,15 @@ export class Enemy {
     this.x += this.vx * d;
     this.y += this.vy * d;
 
-    this.game.options.mechanics.limitCanvas && this.#limitPosition();
+    if (this.fleeing || (this.fleeClampFrames > 0 && (this.#nearEdge() || this.#headingTowardEdge()))) {
+      this.fleeClampFrames = 60;
+    }
+    if (this.game.options.mechanics.limitCanvas) {
+      this.#limitPosition();
+    } else if (this.fleeing || this.fleeClampFrames > 0) {
+      this.#safeClamp();
+    }
+    if (this.fleeClampFrames > 0) this.fleeClampFrames -= 1;
   }
 
   update(deltaTime, allEnemies) {
