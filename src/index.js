@@ -31,7 +31,7 @@ class ScorePanel {
     this.roundInfoEl = document.getElementById("round-info");
   }
 
-  update(scoreManager, match, timeLeft, mechanics, lastWin, credits) {
+  update(scoreManager, match, timeLeft, mechanics, lastWin, credits, started = true) {
     const ranking = scoreManager.getRanking();
     this.scoreListEl.innerHTML = `
       <div class="score-head">
@@ -54,7 +54,9 @@ class ScorePanel {
         )
         .join("")}`;
 
-    this.roundInfoEl.innerHTML = `
+    this.roundInfoEl.innerHTML = !started
+      ? `<p class="timer-active"><strong>👆 Elige tu equipo para empezar</strong></p>`
+      : `
       <p><strong>Match:</strong> ${match}</p>
       ${lastWin ? `<p><strong>Last:</strong> ${lastWin}</p>` : ""}
       <p><strong>Credits:</strong> ${credits} 💰</p>
@@ -208,6 +210,7 @@ class MetaPanel {
     this.progressManager = progressManager;
     this.game = game;
     this.teamButtonsEl = document.getElementById("team-buttons");
+    this.teamSelectEl = document.getElementById("team-select");
     this.shopListEl = document.getElementById("shop-list");
     this.creditsEl = document.getElementById("credits");
 
@@ -236,9 +239,11 @@ class MetaPanel {
 
   render() {
     const selected = this.progressManager.selectedTeam;
+    const chosen = this.progressManager.isTeamChosen();
     this.creditsEl.textContent = this.progressManager.credits;
+    this.teamSelectEl?.classList.toggle("awaiting", !chosen);
     this.teamButtonsEl.querySelectorAll(".team-btn").forEach(btn => {
-      btn.classList.toggle("selected", btn.dataset.team === selected);
+      btn.classList.toggle("selected", chosen && btn.dataset.team === selected);
     });
     this.#renderShop(selected);
   }
@@ -353,7 +358,9 @@ class Game {
       this.timeSinceLastAction = 0;
     });
 
-    this.#restart();
+    if (this.progressManager.isTeamChosen()) {
+      this.#restart();
+    }
   }
 
   /**
@@ -427,6 +434,7 @@ class Game {
   }
 
   update(deltaTime) {
+    if (!this.progressManager.isTeamChosen()) return;
     const substeps = this.progressManager.getTimeCompression();
     const step = deltaTime / substeps;
     for (let i = 0; i < substeps; i++) {
@@ -531,7 +539,8 @@ class Game {
       this.timeLeft,
       this.options.mechanics,
       this.lastWin,
-      this.progressManager.credits
+      this.progressManager.credits,
+      this.progressManager.isTeamChosen()
     );
   }
 

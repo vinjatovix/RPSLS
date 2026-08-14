@@ -41,28 +41,33 @@ export class PowerUp {
   }
 
   /**
-   * Aplicar efecto a la entidad que lo recoge
+   * Aplicar efecto a todo el equipo de la entidad que lo recoge
+   * (incluidas las trampas). El efecto de tiempo es global al match.
    */
   applyTo(enemy) {
     const config = POWERUP_TYPES[this.type];
     const game = this.game;
 
-    switch (this.type) {
-      case "heal":
-        enemy.life = Math.min(enemy.maxLife, enemy.life + config.amount);
-        break;
-      case "zap":
-        enemy.life -= config.amount;
-        if (enemy.life <= 0) {
-          enemy.dead = true;
-          enemy.killedBy = null;
+    if (this.type === "time") {
+      game.timeLeft += config.amount;
+    } else {
+      const targets = game.enemies.filter(e => !e.dead && e.team === enemy.team);
+      for (const target of targets) {
+        switch (this.type) {
+          case "heal":
+            target.life = Math.min(target.maxLife, target.life + config.amount);
+            break;
+          case "zap":
+            target.life -= config.amount;
+            if (target.life <= 0) {
+              target.dead = true;
+              target.killedBy = null;
+            }
+            break;
+          default:
+            target.applyBuff(this.type, config.duration, config.amount);
         }
-        break;
-      case "time":
-        game.timeLeft += config.amount;
-        break;
-      default:
-        enemy.applyBuff(this.type, config.duration, config.amount);
+      }
     }
 
     this.dead = true;

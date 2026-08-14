@@ -20,8 +20,10 @@ export class ProgressManager {
     this.saveKey = "idleSave-v1";
 
     const saved = this.storageAdapter.load(this.saveKey);
+    const hasSave = !!saved;
     this.credits = saved?.credits ?? 0;
     this.selectedTeam = saved?.selectedTeam ?? "rocks";
+    this.teamChosen = hasSave ? (saved?.teamChosen ?? true) : false;
     this.upgrades = saved?.upgrades ?? { powerupLuck: 0, creditRate: 0, timeCompression: 0 };
     this.raceUpgrades = saved?.raceUpgrades ?? {};
 
@@ -74,11 +76,19 @@ export class ProgressManager {
   }
 
   /**
+   * ¿El jugador ya eligió equipo? (la primera vez hay que elegir antes de empezar)
+   */
+  isTeamChosen() {
+    return this.teamChosen;
+  }
+
+  /**
    * Cambiar de equipo
    */
   selectTeam(team) {
     if (!RACE_TEAMS.includes(team)) return false;
     this.selectedTeam = team;
+    this.teamChosen = true;
     this.save();
     return true;
   }
@@ -160,6 +170,7 @@ export class ProgressManager {
       {
         credits: this.credits,
         selectedTeam: this.selectedTeam,
+        teamChosen: this.teamChosen,
         upgrades: this.upgrades,
         raceUpgrades: this.raceUpgrades
       },
@@ -173,6 +184,7 @@ export class ProgressManager {
   reset() {
     this.credits = 0;
     this.selectedTeam = "rocks";
+    this.teamChosen = false;
     this.upgrades = { powerupLuck: 0, creditRate: 0, timeCompression: 0 };
     this.raceUpgrades = {};
     RACE_TEAMS.forEach(team => {
