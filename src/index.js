@@ -337,6 +337,8 @@ class Game {
     if (this.progressManager.isTeamChosen()) {
       this.#restart();
     }
+
+    this.#setupPointerEvents();
   }
 
   /**
@@ -353,6 +355,39 @@ class Game {
     this.destroyed = true;
     cancelAnimationFrame(this.rafId);
     this.inputHandler.destroy();
+    this.canvasManager.getCanvas().removeEventListener("pointerdown", this.boundPointerDown);
+  }
+
+  /**
+   * Escuchar clicks sobre el canvas para recoger powerups con el equipo del jugador
+   */
+  #setupPointerEvents() {
+    this.boundPointerDown = e => this.#handlePointerDown(e);
+    this.canvasManager.getCanvas().addEventListener("pointerdown", this.boundPointerDown);
+  }
+
+  #handlePointerDown(e) {
+    if (this.paused || !this.progressManager.isTeamChosen()) return;
+    const canvas = this.canvasManager.getCanvas();
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    const px = ((e.clientX - rect.left) * canvas.width) / rect.width;
+    const py = ((e.clientY - rect.top) * canvas.height) / rect.height;
+    const team = this.progressManager.selectedTeam;
+
+    for (const powerup of this.powerups) {
+      if (powerup.dead || powerup.isExpired()) continue;
+      const cx = powerup.x + powerup.width / 2;
+      const cy = powerup.y + powerup.height / 2;
+      const dx = px - cx;
+      const dy = py - cy;
+      const radius = powerup.width;
+      if (dx * dx + dy * dy <= radius * radius) {
+        powerup.applyForClick(team);
+        break;
+      }
+    }
   }
 
   #restart() {
@@ -487,10 +522,8 @@ class Game {
     }
 
     for (const powerup of this.powerups) {
-      if (powerup.isExpired()) {
-        powerup.dead = true;
-        continue;
-      }
+      powerup.update(deltaTime);
+      if (powerup.dead) continue;
       for (const enemy of this.enemies) {
         if (!enemy.dead && CollisionDetector.checkOverlap(powerup, enemy)) {
           powerup.applyTo(enemy);
