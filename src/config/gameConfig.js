@@ -40,30 +40,30 @@ export const GAME_CONFIG = Object.freeze({
 /**
  * Configuración de equipos/razas
  * Cada raza con estadísticas diferenciadas:
- * - rock: mucha vida y buen daño
- * - lizard: rápida y frágil
- * - scissors: mucho daño
- * - spock: gran aceleración
- * - paper: buen giro
- * Balance general: fuerza total (~vida × daño × movilidad) equilibrada
+ * - rock: el tanque, mucha vida
+ * - lizard: la más rápida
+ * - scissors: el cristal, máximo daño
+ * - spock: gran aceleración y frenada
+ * - paper: el mejor giro
+ * El RPS (quién mata a quién) está forzado por aim en código.
  */
 export const RACE_STATS = Object.freeze({
   rocks: {
     emoji: "🪨",
     team: "rocks",
     color: "gray",
-    description: "Mucha vida y buen daño",
+    description: "Mucha vida, poco giro",
     aim: ["scissors", "lizards"],
-    health: { current: 460, max: 460 },
-    damage: { amount: 12 },
+    health: { current: 545, max: 545 },
+    damage: { amount: 10 },
     movement: {
       baseSpeed: 3,
-      maxSpeed: 15,
+      maxSpeed: 14,
       minSpeed: 0.4,
       speedVariance: 2,
-      acceleration: 0.07,
-      deceleration: 0.06,
-      rotationSpeed: 0.014,
+      acceleration: 0.06,
+      deceleration: 0.05,
+      rotationSpeed: 0.012,
       rotationAcceleration: 0.0012
     }
   },
@@ -71,29 +71,29 @@ export const RACE_STATS = Object.freeze({
     emoji: "📄",
     team: "papers",
     color: "purple",
-    description: "Equilibrado, el mejor giro",
+    description: "El mejor giro, equilibrado",
     aim: ["rocks", "spocks"],
     health: { current: 450, max: 450 },
-    damage: { amount: 8 },
+    damage: { amount: 9 },
     movement: {
       baseSpeed: 3.5,
-      maxSpeed: 16,
+      maxSpeed: 15,
       minSpeed: 0.5,
       speedVariance: 3,
       acceleration: 0.08,
-      deceleration: 0.06,
-      rotationSpeed: 0.015,
-      rotationAcceleration: 0.0028
+      deceleration: 0.07,
+      rotationSpeed: 0.018,
+      rotationAcceleration: 0.003
     }
   },
   scissors: {
     emoji: "✂️",
     team: "scissors",
     color: "red",
-    description: "Frágil, rápido y ligero",
+    description: "Máximo daño, poca vida",
     aim: ["papers", "lizards"],
-    health: { current: 430, max: 430 },
-    damage: { amount: 12 },
+    health: { current: 340, max: 340 },
+    damage: { amount: 15 },
     movement: {
       baseSpeed: 4,
       maxSpeed: 16,
@@ -101,7 +101,7 @@ export const RACE_STATS = Object.freeze({
       speedVariance: 3,
       acceleration: 0.08,
       deceleration: 0.06,
-      rotationSpeed: 0.015,
+      rotationSpeed: 0.017,
       rotationAcceleration: 0.002
     }
   },
@@ -109,18 +109,18 @@ export const RACE_STATS = Object.freeze({
     emoji: "🦎",
     team: "lizards",
     color: "green",
-    description: "La más rápida, frágil",
+    description: "La más rápida, equilibrada",
     aim: ["spocks", "papers"],
-    health: { current: 425, max: 425 },
-    damage: { amount: 12 },
+    health: { current: 470, max: 470 },
+    damage: { amount: 13 },
     movement: {
       baseSpeed: 5,
-      maxSpeed: 18,
+      maxSpeed: 19,
       minSpeed: 0.5,
       speedVariance: 4,
       acceleration: 0.09,
-      deceleration: 0.08,
-      rotationSpeed: 0.016,
+      deceleration: 0.09,
+      rotationSpeed: 0.015,
       rotationAcceleration: 0.002
     }
   },
@@ -130,16 +130,16 @@ export const RACE_STATS = Object.freeze({
     color: "yellow",
     description: "Gran aceleración, frena bien",
     aim: ["rocks", "scissors"],
-    health: { current: 405, max: 405 },
-    damage: { amount: 10 },
+    health: { current: 430, max: 430 },
+    damage: { amount: 13 },
     movement: {
       baseSpeed: 3.5,
-      maxSpeed: 14,
+      maxSpeed: 15,
       minSpeed: 0.5,
       speedVariance: 3,
-      acceleration: 0.1,
-      deceleration: 0.1,
-      rotationSpeed: 0.014,
+      acceleration: 0.11,
+      deceleration: 0.11,
+      rotationSpeed: 0.013,
       rotationAcceleration: 0.0018
     }
   }
