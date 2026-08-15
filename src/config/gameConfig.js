@@ -20,7 +20,13 @@ export const GAME_CONFIG = Object.freeze({
     matchTimeGrowthMs: 50,
     matchTimeMaxMs: 60000,
     ai: {
-      dangerRadius: 300
+      dangerRadius: 220,
+      escape: {
+        margin: 30,
+        step: Math.PI / 12,
+        clearanceWeight: 0.78,
+        awayWeight: 0.22
+      }
     }
   },
   effects: {
@@ -49,7 +55,7 @@ export const RACE_STATS = Object.freeze({
     description: "Mucha vida y buen daño",
     aim: ["scissors", "lizards"],
     health: { current: 460, max: 460 },
-    damage: { amount: 9 },
+    damage: { amount: 12 },
     movement: {
       baseSpeed: 3,
       maxSpeed: 15,
@@ -57,7 +63,7 @@ export const RACE_STATS = Object.freeze({
       speedVariance: 2,
       acceleration: 0.07,
       deceleration: 0.06,
-      rotationSpeed: 0.0136,
+      rotationSpeed: 0.015,
       rotationAcceleration: 0.0012
     }
   },
@@ -86,8 +92,8 @@ export const RACE_STATS = Object.freeze({
     color: "red",
     description: "Frágil, rápido y ligero",
     aim: ["papers", "lizards"],
-    health: { current: 380, max: 380 },
-    damage: { amount: 8 },
+    health: { current: 430, max: 430 },
+    damage: { amount: 12 },
     movement: {
       baseSpeed: 4,
       maxSpeed: 15,
@@ -105,11 +111,11 @@ export const RACE_STATS = Object.freeze({
     color: "green",
     description: "La más rápida, frágil",
     aim: ["spocks", "papers"],
-    health: { current: 440, max: 440 },
+    health: { current: 410, max: 410 },
     damage: { amount: 10 },
     movement: {
       baseSpeed: 5,
-      maxSpeed: 18,
+      maxSpeed: 17,
       minSpeed: 0.5,
       speedVariance: 4,
       acceleration: 0.09,
@@ -124,14 +130,14 @@ export const RACE_STATS = Object.freeze({
     color: "yellow",
     description: "Gran aceleración, frena bien",
     aim: ["rocks", "scissors"],
-    health: { current: 430, max: 430 },
+    health: { current: 405, max: 405 },
     damage: { amount: 10 },
     movement: {
       baseSpeed: 3.5,
-      maxSpeed: 17,
+      maxSpeed: 14,
       minSpeed: 0.5,
       speedVariance: 3,
-      acceleration: 0.18,
+      acceleration: 0.1,
       deceleration: 0.1,
       rotationSpeed: 0.014,
       rotationAcceleration: 0.0018

@@ -7,6 +7,7 @@
 
 import { RACE_STATS, GAME_CONFIG } from "../config/gameConfig.js";
 import { CollisionDetector } from "../canvas/geometry/CollisionDetector.js";
+import { pickEscapePoint } from "../canvas/geometry/EscapeSolver.js";
 
 /**
  * Mapa estático: para cada equipo, qué equipos pueden dañarlo (predadores).
@@ -205,31 +206,26 @@ export class Enemy {
   }
 
   #flee(allEnemies) {
-    const radius = GAME_CONFIG.mechanics.ai.dangerRadius;
+    const { dangerRadius, escape } = GAME_CONFIG.mechanics.ai;
     let threat = null;
     for (const enemy of allEnemies) {
       if (enemy.dead || !PREDATORS[this.team].includes(enemy.team)) continue;
       const dx = this.x - enemy.x;
       const dy = this.y - enemy.y;
       const d2 = dx * dx + dy * dy;
-      if (d2 < radius * radius && (!threat || d2 < threat.d2)) {
-        threat = { x: dx, y: dy, d2 };
+      if (d2 < dangerRadius * dangerRadius && (!threat || d2 < threat.d2)) {
+        threat = { x: enemy.x, y: enemy.y, d2 };
       }
     }
     if (!threat) return false;
-    const dist = Math.sqrt(threat.d2) || 1;
-    const ux = threat.x / dist;
-    const uy = threat.y / dist;
-    const { width, height } = this.game.canvasManager.getSize();
-    const margin = 30;
-    let tx = this.x + ux * radius;
-    let ty = this.y + uy * radius;
-    if (tx < margin) tx = margin + (margin - tx);
-    else if (tx > width - margin) tx = width - margin - (tx - (width - margin));
-    if (ty < margin) ty = margin + (margin - ty);
-    else if (ty > height - margin) ty = height - margin - (ty - (height - margin));
-    this.aimX = tx;
-    this.aimY = ty;
+    const aim = pickEscapePoint(
+      { x: this.x, y: this.y },
+      { x: threat.x, y: threat.y },
+      this.game.canvasManager.getSize(),
+      { ...escape, radius: dangerRadius }
+    );
+    this.aimX = aim.x;
+    this.aimY = aim.y;
     return true;
   }
 
