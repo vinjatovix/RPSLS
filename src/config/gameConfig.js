@@ -60,8 +60,8 @@ export const RACE_STATS = Object.freeze({
       speedVariance: 2,
       acceleration: 0.07,
       deceleration: 0.06,
-      rotationSpeed: 0.016,
-      rotationAcceleration: 0.0004
+      rotationSpeed: 0.0136,
+      rotationAcceleration: 0.0012
     }
   },
   papers: {
@@ -70,7 +70,7 @@ export const RACE_STATS = Object.freeze({
     color: "purple",
     description: "Equilibrado, el mejor giro",
     aim: ["rocks", "spocks"],
-    health: { current: 370, max: 370 },
+    health: { current: 450, max: 450 },
     damage: { amount: 8 },
     movement: {
       baseSpeed: 3.5,
@@ -80,7 +80,7 @@ export const RACE_STATS = Object.freeze({
       acceleration: 0.06,
       deceleration: 0.06,
       rotationSpeed: 0.015,
-      rotationAcceleration: 0.0014
+      rotationAcceleration: 0.0028
     }
   },
   scissors: {
@@ -90,16 +90,16 @@ export const RACE_STATS = Object.freeze({
     description: "Frágil, rápido y ligero",
     aim: ["papers", "lizards"],
     health: { current: 380, max: 380 },
-    damage: { amount: 9 },
+    damage: { amount: 8 },
     movement: {
-      baseSpeed: 3.5,
+      baseSpeed: 4,
       maxSpeed: 15,
       minSpeed: 0.5,
       speedVariance: 3,
       acceleration: 0.06,
       deceleration: 0.06,
       rotationSpeed: 0.015,
-      rotationAcceleration: 0.0006
+      rotationAcceleration: 0.002
     }
   },
   lizards: {
@@ -108,17 +108,17 @@ export const RACE_STATS = Object.freeze({
     color: "green",
     description: "La más rápida, frágil",
     aim: ["spocks", "papers"],
-    health: { current: 360, max: 360 },
+    health: { current: 440, max: 440 },
     damage: { amount: 10 },
     movement: {
       baseSpeed: 5,
-      maxSpeed: 21,
+      maxSpeed: 18,
       minSpeed: 0.5,
       speedVariance: 4,
       acceleration: 0.09,
       deceleration: 0.08,
-      rotationSpeed: 0.014,
-      rotationAcceleration: 0.0006
+      rotationSpeed: 0.016,
+      rotationAcceleration: 0.002
     }
   },
   spocks: {
@@ -127,7 +127,7 @@ export const RACE_STATS = Object.freeze({
     color: "yellow",
     description: "Gran aceleración",
     aim: ["rocks", "scissors"],
-    health: { current: 350, max: 350 },
+    health: { current: 430, max: 430 },
     damage: { amount: 10 },
     movement: {
       baseSpeed: 3.5,
@@ -137,7 +137,7 @@ export const RACE_STATS = Object.freeze({
       acceleration: 0.18,
       deceleration: 0.1,
       rotationSpeed: 0.014,
-      rotationAcceleration: 0.0006
+      rotationAcceleration: 0.0018
     }
   }
 });

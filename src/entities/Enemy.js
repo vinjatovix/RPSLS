@@ -50,6 +50,7 @@ export class Enemy {
     this.height = 20;
     this.vx = 0;
     this.vy = 0;
+    this.angularVelocity = 0;
     this.aimX = null;
     this.aimY = null;
     this.closest = null;
@@ -57,7 +58,6 @@ export class Enemy {
     this.dead = false;
     this.offScreen = false;
     this.fleeing = false;
-    this.fleeClampFrames = 0;
 
     this.maxLife = Math.round(stats.health.max * mods.hp);
     this.life = this.maxLife;
@@ -141,34 +141,6 @@ export class Enemy {
     this.y = clamped.y;
   }
 
-  #safeClamp() {
-    const { width, height } = this.game.canvasManager.getSize();
-    this.x = Math.min(Math.max(this.x, 2), width - this.width - 2);
-    this.y = Math.min(Math.max(this.y, 2), height - this.height - 2);
-  }
-
-  #nearEdge() {
-    const { width, height } = this.game.canvasManager.getSize();
-    const m = 40;
-    return (
-      this.x < m ||
-      this.x > width - this.width - m ||
-      this.y < m ||
-      this.y > height - this.height - m
-    );
-  }
-
-  #headingTowardEdge() {
-    const { width, height } = this.game.canvasManager.getSize();
-    const m = 40;
-    return (
-      (this.x < m && this.vx < 0) ||
-      (this.x > width - this.width - m && this.vx > 0) ||
-      (this.y < m && this.vy < 0) ||
-      (this.y > height - this.height - m && this.vy > 0)
-    );
-  }
-
   #limitSpeed() {
     const speedMult = this.getSpeedMultiplier();
     if (this.speed > this.maxSpeed * speedMult) {
@@ -192,7 +164,16 @@ export class Enemy {
 
   #calculateRotationSpeed(angleDiff) {
     const turnMult = this.getTurnMultiplier();
-    this.angle = angleDiff < 0 ? this.angle + this.rotationSpeed * turnMult : this.angle - this.rotationSpeed * turnMult;
+    const maxAngular = this.rotationSpeed * turnMult;
+    const accel = this.rotationAcceleration * turnMult;
+    this.angularVelocity += (angleDiff < 0 ? 1 : -1) * accel;
+    if (this.angularVelocity > maxAngular) {
+      this.angularVelocity = maxAngular;
+    }
+    if (this.angularVelocity < -maxAngular) {
+      this.angularVelocity = -maxAngular;
+    }
+    this.angle += this.angularVelocity;
   }
 
   #calculateSpeed(angleDiff) {
@@ -264,7 +245,6 @@ export class Enemy {
       this.fleeing = false;
     } else {
       this.fleeing = this.#flee(allEnemies);
-      if (this.fleeing) this.fleeClampFrames = 60;
       if (!this.fleeing) this.#goCenter();
     }
   }
@@ -279,15 +259,9 @@ export class Enemy {
     this.x += this.vx * d;
     this.y += this.vy * d;
 
-    if (this.fleeing || (this.fleeClampFrames > 0 && (this.#nearEdge() || this.#headingTowardEdge()))) {
-      this.fleeClampFrames = 60;
-    }
     if (this.game.options.mechanics.limitCanvas) {
       this.#limitPosition();
-    } else if (this.fleeing || this.fleeClampFrames > 0) {
-      this.#safeClamp();
     }
-    if (this.fleeClampFrames > 0) this.fleeClampFrames -= 1;
   }
 
   update(deltaTime, allEnemies) {

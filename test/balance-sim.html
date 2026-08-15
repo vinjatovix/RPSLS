@@ -428,10 +428,16 @@
       // ---------- Barrido de sensibilidad ----------
 
       const SWEEP_STAT_PATHS = [
-        ["health", "health.max"],
-        ["damage", "damage.amount"],
+        ["baseSpeed", "movement.baseSpeed"],
+        ["minSpeed", "movement.minSpeed"],
+        ["speedVariance", "movement.speedVariance"],
+        ["acceleration", "movement.acceleration"],
+        ["deceleration", "movement.deceleration"],
         ["maxSpeed", "movement.maxSpeed"],
-        ["rotationSpeed", "movement.rotationSpeed"]
+        ["rotationSpeed", "movement.rotationSpeed"],
+        ["rotationAcceleration", "movement.rotationAcceleration"],
+        ["health", "health.max"],
+        ["damage", "damage.amount"]
       ];
 
       function readPath(obj, path) {
@@ -515,7 +521,7 @@
             GAME_CONFIG.mechanics.ai.dangerRadius = Math.max(20, dangerBase * (1 + (cfg.dir * pct) / 100));
           } else {
             const cur = readPath(RACE_STATS[cfg.team], cfg.path);
-            writePath(RACE_STATS[cfg.team], cfg.path, Math.max(0.05, cur * (1 + (cfg.dir * pct) / 100)));
+            writePath(RACE_STATS[cfg.team], cfg.path, Math.max(Math.abs(cur) * 0.01, cur * (1 + (cfg.dir * pct) / 100)));
           }
 
           let rates = null;
