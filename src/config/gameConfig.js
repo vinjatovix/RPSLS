@@ -63,7 +63,7 @@ export const RACE_STATS = Object.freeze({
       speedVariance: 2,
       acceleration: 0.07,
       deceleration: 0.06,
-      rotationSpeed: 0.015,
+      rotationSpeed: 0.014,
       rotationAcceleration: 0.0012
     }
   },
@@ -77,10 +77,10 @@ export const RACE_STATS = Object.freeze({
     damage: { amount: 8 },
     movement: {
       baseSpeed: 3.5,
-      maxSpeed: 15,
+      maxSpeed: 16,
       minSpeed: 0.5,
       speedVariance: 3,
-      acceleration: 0.06,
+      acceleration: 0.08,
       deceleration: 0.06,
       rotationSpeed: 0.015,
       rotationAcceleration: 0.0028
@@ -96,10 +96,10 @@ export const RACE_STATS = Object.freeze({
     damage: { amount: 12 },
     movement: {
       baseSpeed: 4,
-      maxSpeed: 15,
+      maxSpeed: 16,
       minSpeed: 0.5,
       speedVariance: 3,
-      acceleration: 0.06,
+      acceleration: 0.08,
       deceleration: 0.06,
       rotationSpeed: 0.015,
       rotationAcceleration: 0.002
@@ -111,11 +111,11 @@ export const RACE_STATS = Object.freeze({
     color: "green",
     description: "La más rápida, frágil",
     aim: ["spocks", "papers"],
-    health: { current: 410, max: 410 },
-    damage: { amount: 10 },
+    health: { current: 425, max: 425 },
+    damage: { amount: 12 },
     movement: {
       baseSpeed: 5,
-      maxSpeed: 17,
+      maxSpeed: 18,
       minSpeed: 0.5,
       speedVariance: 4,
       acceleration: 0.09,
