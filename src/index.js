@@ -337,7 +337,7 @@ class Game {
 
     this.gameTime = 0;
     this.powerups = [];
-    this.powerupTimer = 6000 / this.progressManager.getPowerupLuck();
+    this.powerupTimer = 4500 / this.progressManager.getPowerupLuck();
     this.timeSinceLastAction = 0;
     this.paused = false;
     this.eventBus.subscribe("kill", () => {
@@ -396,7 +396,7 @@ class Game {
       const cy = powerup.y + powerup.height / 2;
       const dx = px - cx;
       const dy = py - cy;
-      const radius = powerup.width;
+      const radius = powerup.width * this.progressManager.getCollectRadiusMultiplier();
       if (dx * dx + dy * dy <= radius * radius) {
         powerup.applyForClick(team);
         break;
@@ -549,9 +549,12 @@ class Game {
 
   #updatePowerups(deltaTime) {
     this.powerupTimer -= deltaTime;
-    if (this.powerupTimer <= 0 && this.powerups.length < 8) {
+    if (
+      this.powerupTimer <= 0 &&
+      this.powerups.length < 8 + this.progressManager.getPowerupCapBonus()
+    ) {
       this.powerups.push(new PowerUp({ game: this }));
-      this.powerupTimer = 6000 / this.progressManager.getPowerupLuck();
+      this.powerupTimer = 4500 / this.progressManager.getPowerupLuck();
     }
 
     for (const powerup of this.powerups) {

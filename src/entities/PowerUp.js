@@ -137,7 +137,11 @@ export class PowerUp {
           target.life = Math.max(1, Math.floor(target.life * config.amount));
           break;
         default:
-          target.applyBuff(this.type, config.duration, config.amount);
+          const duration =
+            team === game.progressManager.selectedTeam
+              ? config.duration * game.progressManager.getPowerupDurationMultiplier()
+              : config.duration;
+          target.applyBuff(this.type, duration, config.amount);
       }
     }
   }

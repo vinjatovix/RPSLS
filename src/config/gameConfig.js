@@ -232,6 +232,38 @@ export const UPGRADES = Object.freeze({
     costGrowth: 1.35,
     description: "+10% giro"
   },
+  decel: {
+    label: "Frenada",
+    emoji: "🛑",
+    perRace: true,
+    baseCost: 20,
+    costGrowth: 1.35,
+    description: "+10% frenada"
+  },
+  regen: {
+    label: "Regeneración",
+    emoji: "❤️🔄",
+    perRace: true,
+    baseCost: 25,
+    costGrowth: 1.35,
+    description: "+4 vida/s"
+  },
+  armor: {
+    label: "Armadura",
+    emoji: "🛡️",
+    perRace: true,
+    baseCost: 25,
+    costGrowth: 1.35,
+    description: "-8% daño recibido"
+  },
+  vampire: {
+    label: "Vampirismo",
+    emoji: "🧛",
+    perRace: true,
+    baseCost: 30,
+    costGrowth: 1.35,
+    description: "+5% curación al dañar"
+  },
   powerupLuck: {
     label: "Suerte powerups",
     emoji: "🍀",
@@ -255,5 +287,29 @@ export const UPGRADES = Object.freeze({
     baseCost: 100,
     costGrowth: 2.5,
     description: "Simulación ×2 (más matches por hora)"
+  },
+  powerupDuration: {
+    label: "Duración buffs",
+    emoji: "⏱️",
+    perRace: false,
+    baseCost: 30,
+    costGrowth: 1.4,
+    description: "+10% duración de powerups"
+  },
+  powerupCap: {
+    label: "Tope powerups",
+    emoji: "📦",
+    perRace: false,
+    baseCost: 35,
+    costGrowth: 1.4,
+    description: "+2 powerups simultáneos"
+  },
+  collectRadius: {
+    label: "Alcance recogida",
+    emoji: "🎯",
+    perRace: false,
+    baseCost: 25,
+    costGrowth: 1.4,
+    description: "+15% radio de recogida"
   }
 });

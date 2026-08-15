@@ -26,7 +26,14 @@ export class ProgressManager {
     this.credits = 0;
     this.selectedTeam = "rocks";
     this.teamChosen = false;
-    this.upgrades = { powerupLuck: 0, creditRate: 0, timeCompression: 0 };
+    this.upgrades = {
+      powerupLuck: 0,
+      creditRate: 0,
+      timeCompression: 0,
+      powerupDuration: 0,
+      powerupCap: 0,
+      collectRadius: 0
+    };
     this.raceUpgrades = {};
 
     RACE_TEAMS.forEach(team => {
@@ -46,7 +53,7 @@ export class ProgressManager {
   #subscribe() {
     this.eventBus.subscribe("kill", ({ killerTeam }) => {
       if (killerTeam === this.selectedTeam) {
-        this.awardCredits(1);
+        this.awardCredits(2);
       }
     });
 
@@ -142,7 +149,11 @@ export class ProgressManager {
       damage: 1 + 0.1 * (levels.damage ?? 0),
       speed: 1 + 0.08 * (levels.speed ?? 0),
       accel: 1 + 0.1 * (levels.accel ?? 0),
-      turn: 1 + 0.1 * (levels.turn ?? 0)
+      turn: 1 + 0.1 * (levels.turn ?? 0),
+      decel: 1 + 0.1 * (levels.decel ?? 0),
+      regen: 4 * (levels.regen ?? 0),
+      armor: 0.08 * (levels.armor ?? 0),
+      vampire: 0.05 * (levels.vampire ?? 0)
     };
   }
 
@@ -167,6 +178,27 @@ export class ProgressManager {
     return 1 + 0.05 * (this.upgrades.powerupLuck ?? 0);
   }
 
+  /**
+   * Duración de buffs: +10% por nivel (solo el equipo del jugador)
+   */
+  getPowerupDurationMultiplier() {
+    return 1 + 0.1 * (this.upgrades.powerupDuration ?? 0);
+  }
+
+  /**
+   * Tope de powerups simultáneos: +2 por nivel
+   */
+  getPowerupCapBonus() {
+    return 2 * (this.upgrades.powerupCap ?? 0);
+  }
+
+  /**
+   * Radio de recogida por click: +15% por nivel
+   */
+  getCollectRadiusMultiplier() {
+    return 1 + 0.15 * (this.upgrades.collectRadius ?? 0);
+  }
+
   save() {
     // El progreso es de sesión: no se persiste nada en localStorage.
   }
@@ -178,7 +210,14 @@ export class ProgressManager {
     this.credits = 0;
     this.selectedTeam = "rocks";
     this.teamChosen = false;
-    this.upgrades = { powerupLuck: 0, creditRate: 0, timeCompression: 0 };
+    this.upgrades = {
+      powerupLuck: 0,
+      creditRate: 0,
+      timeCompression: 0,
+      powerupDuration: 0,
+      powerupCap: 0,
+      collectRadius: 0
+    };
     this.raceUpgrades = {};
     RACE_TEAMS.forEach(team => {
       this.raceUpgrades[team] = {};

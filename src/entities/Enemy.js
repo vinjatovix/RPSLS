@@ -25,7 +25,17 @@ export class Enemy {
     this.team = team;
     const stats = RACE_STATS[team];
     const scale = game.canvasManager.getScale();
-    const mods = modifiers || { hp: 1, damage: 1, speed: 1, accel: 1, turn: 1 };
+    const {
+      hp = 1,
+      damage = 1,
+      speed = 1,
+      accel = 1,
+      turn = 1,
+      decel = 1,
+      regen = 0,
+      armor = 0,
+      vampire = 0
+    } = modifiers || {};
     const m = stats.movement;
 
     this.emoji = stats.emoji;
@@ -38,13 +48,13 @@ export class Enemy {
     this.x = x || spawn.x;
     this.y = y || spawn.y;
 
-    this.speed = (m.baseSpeed + Math.random() * m.speedVariance) * mods.speed * scale;
-    this.maxSpeed = m.maxSpeed * mods.speed * (scale * 1.5);
+    this.speed = (m.baseSpeed + Math.random() * m.speedVariance) * speed * scale;
+    this.maxSpeed = m.maxSpeed * speed * (scale * 1.5);
     this.minSpeed = m.minSpeed;
-    this.acceleration = m.acceleration * mods.accel * scale * 2;
-    this.deceleration = m.deceleration * mods.accel * scale;
-    this.rotationSpeed = m.rotationSpeed * mods.turn * (1 + scale);
-    this.rotationAcceleration = m.rotationAcceleration * mods.turn * (1 + scale);
+    this.acceleration = m.acceleration * accel * scale * 2;
+    this.deceleration = m.deceleration * accel * decel * scale;
+    this.rotationSpeed = m.rotationSpeed * turn * (1 + scale);
+    this.rotationAcceleration = m.rotationAcceleration * turn * (1 + scale);
     this.angle = angle || Math.random() * 2 * Math.PI;
 
     this.width = 20;
@@ -60,10 +70,14 @@ export class Enemy {
     this.offScreen = false;
     this.fleeing = false;
 
-    this.maxLife = Math.round(stats.health.max * mods.hp);
+    this.maxLife = Math.round(stats.health.max * hp);
     this.life = this.maxLife;
     this.baseDamage = stats.damage.amount;
-    this.damageMultiplier = mods.damage;
+    this.damageMultiplier = damage;
+
+    this.regen = regen;
+    this.armor = armor;
+    this.vampire = vampire;
 
     this.buffs = {};
   }
@@ -111,15 +125,17 @@ export class Enemy {
   }
 
   getIncomingDamageMultiplier() {
-    return this.isBuffActive("armor") ? this.buffs.armor.amount : 1;
+    if (this.isBuffActive("armor")) return this.buffs.armor.amount;
+    return Math.max(0, 1 - this.armor);
   }
 
   #kill(enemy) {
     if (this.aim.includes(enemy.team)) {
       const damage = this.getDamage() * enemy.getIncomingDamageMultiplier();
       enemy.life -= damage;
-      if (this.isBuffActive("vampire") && damage > 0) {
-        this.life = Math.min(this.maxLife, this.life + damage * this.buffs.vampire.amount);
+      const healRatio = this.isBuffActive("vampire") ? this.buffs.vampire.amount : this.vampire;
+      if (healRatio > 0 && damage > 0) {
+        this.life = Math.min(this.maxLife, this.life + damage * healRatio);
       }
       if (enemy.life <= 0) {
         enemy.dead = true;
@@ -278,8 +294,9 @@ export class Enemy {
   }
 
   update(deltaTime, allEnemies) {
-    if (this.isBuffActive("regen")) {
-      this.life = Math.min(this.maxLife, this.life + this.buffs.regen.amount * (deltaTime / 1000));
+    const regen = this.isBuffActive("regen") ? this.buffs.regen.amount : this.regen;
+    if (regen > 0) {
+      this.life = Math.min(this.maxLife, this.life + regen * (deltaTime / 1000));
     }
     this.#checkPosition();
     this.#setTarget(allEnemies);
