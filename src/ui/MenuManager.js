@@ -10,6 +10,14 @@ import { GAME_MODES, LEAGUE_LENGTHS, RACE_STATS } from "../config/gameConfig.js"
 const LEVEL_MIN = 0;
 const LEVEL_MAX = 2000;
 
+const TEAM_STAT_BARS = [
+  { label: "Vida", get: s => s.health.max },
+  { label: "Daño", get: s => s.damage.amount },
+  { label: "Velocidad", get: s => s.movement.maxSpeed },
+  { label: "Aceleración", get: s => s.movement.acceleration },
+  { label: "Giro", get: s => s.movement.rotationSpeed }
+];
+
 export class MenuManager {
   /**
    * @param {Object} options
@@ -321,12 +329,25 @@ export class MenuManager {
     const predators = Object.keys(RACE_STATS).filter(t => RACE_STATS[t].aim.includes(team));
     const withEmoji = t => `${RACE_STATS[t].emoji} ${t}`;
 
+    const bars = TEAM_STAT_BARS.map(stat => {
+      const max = Math.max(...Object.values(RACE_STATS).map(s => stat.get(s)));
+      const pct = Math.round((stat.get(stats) / max) * 100);
+      return `
+        <div class="stat-bar-row">
+          <span class="stat-bar-label">${stat.label}</span>
+          <span class="stat-bar-track">
+            <span class="stat-bar-fill" style="width:${pct}%; background:${stats.color}"></span>
+          </span>
+        </div>`;
+    }).join("");
+
     container.innerHTML = `
       <div class="team-details-head">
         <span class="team-emoji">${stats.emoji}</span>
         <strong>${team}</strong>
         ${stats.description ? `<span class="team-details-desc">${stats.description}</span>` : ""}
       </div>
+      <div class="stat-bar-box">${bars}</div>
       <div class="team-details-row">
         <span class="team-details-label">Gana a:</span>
         <span>${stats.aim.map(withEmoji).join(" · ")}</span>

@@ -323,11 +323,18 @@ export class Enemy {
   }
 
   #drawHealthBar() {
+    const frac = Math.max(0, Math.min(1, this.life / this.maxLife));
+    const x = this.x;
+    const y = this.y - 10;
+    const w = this.width;
+    const h = 6;
     this.ctx.save();
-    this.ctx.fillStyle = "red";
-    this.ctx.fillRect(this.x, this.y - 10, this.width, 5);
-    this.ctx.fillStyle = "green";
-    this.ctx.fillRect(this.x, this.y - 10, (this.width * this.life) / this.maxLife, 5);
+    this.ctx.fillStyle = "rgba(30,30,30,0.9)";
+    this.ctx.fillRect(x, y, w, h);
+    this.ctx.fillStyle = `hsl(${frac * 120}, 85%, 50%)`;
+    this.ctx.fillRect(x, y, w * frac, h);
+    this.ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    this.ctx.strokeRect(x - 0.5, y - 0.5, w + 1, h + 1);
     this.ctx.restore();
   }
 

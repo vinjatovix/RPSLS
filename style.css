@@ -370,6 +370,7 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 100;
+  animation: menu-fade 0.15s ease-out;
 }
 
 .menu-overlay[hidden] {
@@ -385,6 +386,56 @@ body {
   max-width: 90vw;
   text-align: center;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  animation: menu-pop 0.18s ease-out;
+}
+
+@keyframes menu-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes menu-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.stat-bar-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.9rem 0;
+}
+
+.stat-bar-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stat-bar-label {
+  color: rgb(130, 130, 140);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: right;
+}
+
+.stat-bar-track {
+  display: block;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.stat-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
 }
 
 .menu-modal h2 {
