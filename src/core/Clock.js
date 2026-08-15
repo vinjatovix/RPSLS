@@ -1,8 +1,3 @@
-/**
- * Clock - Gestión de tiempo y FPS
- * Responsabilidad única: calcular deltaTime y FPS
- */
-
 export class Clock {
   constructor() {
     this.lastTime = Date.now();
@@ -21,8 +16,8 @@ export class Clock {
   }
 
   /**
-   * Reanudar el reloj desde cero (evita deltas gigantes tras
-   * volver el foco al navegador).
+   * Restart the clock from scratch (avoids giant deltas after
+   * returning focus to the browser).
    */
   reset() {
     this.lastTime = Date.now();

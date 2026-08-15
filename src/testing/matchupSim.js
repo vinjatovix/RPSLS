@@ -1,14 +1,14 @@
 /**
- * matchupSim.js - Simulador determinista de persecución 1v1
- * Reutiliza las clases reales de raza (Enemy) y su update() en un arena vacía,
- * SIN cluster: mide si un cazador alcanza y mata a su presa, y cuánto tarda.
+ * matchupSim.js - Deterministic 1v1 pursuit simulator
+ * Reuses the real race classes (Enemy) and their update() in an empty arena,
+ * WITHOUT cluster: measures whether a chaser catches and kills its prey, and how long it takes.
  *
- * Es el diagnóstico que falta en el reporte de balance: la matriz real de
- * contadores (quién caza a quién) sin el ruido del fúnel central.
+ * It is the diagnosis missing from the balance report: the real matrix of
+ * counters (who chases whom) without the noise of the central funnel.
  *
- * Uso:
- *   const res = runMatchupSim({ seeds: 12 });
- *   formatMatchupReport(res);
+ * Usage:
+ *   const result = runMatchupSim({ seeds: 12 });
+ *   formatMatchupReport(result);
  */
 
 import { RACE_CLASSES } from "../entities/races.js";
@@ -20,15 +20,15 @@ export const DEFAULT_ARENA = { width: 640, height: 384 };
 const MAX_WIDTH = 5120;
 
 /**
- * Fake game mínimo que satisface lo que Enemy usa en update():
- * canvasManager, options.mechanics y scoreManager. Nunca se dibuja.
+ * Minimal fake game that satisfies what Enemy uses in update():
+ * canvasAdapter, options.mechanics and scoreManager. Never draws.
  */
 function makeFakeGame(arena) {
   const scale = arena.width / MAX_WIDTH;
   return {
-    canvasManager: {
+    canvasAdapter: {
       getScale: () => scale,
-      getCtx: () => null,
+      getContext: () => null,
       getWidth: () => arena.width,
       getHeight: () => arena.height,
       getSize: () => ({ width: arena.width, height: arena.height }),
@@ -48,22 +48,22 @@ function makeFakeGame(arena) {
 }
 
 /**
- * Una prueba: la presa espera en el centro del arena (como en el scrum real),
- * el cazador entra desde una distancia dada y tiene que acercarse y matarla.
- * Mide el tiempo real (acercamiento + daño) hasta el kill.
+ * A trial: the prey waits at the center of the arena (like in the real scrum),
+ * the chaser enters from a given distance and must close in and kill it.
+ * Measures the real time (approach + damage) until the kill.
  */
-function runTrial(chaserTeam, victimTeam, { arena, distance, dt, maxSteps }) {
+function runTrial(chaserTeam, victimTeam, { arena, distance, deltaTime, maxSteps }) {
   const game = makeFakeGame(arena);
-  const cx = arena.width / 2;
-  const midY = arena.height / 2;
-  const chaser = new RACE_CLASSES[chaserTeam]({ game, x: cx + distance, y: midY });
-  const victim = new RACE_CLASSES[victimTeam]({ game, x: cx, y: midY });
+  const centerX = arena.width / 2;
+  const centerY = arena.height / 2;
+  const chaser = new RACE_CLASSES[chaserTeam]({ game, x: centerX + distance, y: centerY });
+  const victim = new RACE_CLASSES[victimTeam]({ game, x: centerX, y: centerY });
   const both = [chaser, victim];
 
   let steps = 0;
   while (steps < maxSteps) {
-    chaser.update(dt, both);
-    victim.update(dt, both);
+    chaser.update(deltaTime, both);
+    victim.update(deltaTime, both);
     steps += 1;
     if (victim.dead) return { winner: chaserTeam, steps };
     if (chaser.dead) return { winner: victimTeam, steps };
@@ -72,19 +72,19 @@ function runTrial(chaserTeam, victimTeam, { arena, distance, dt, maxSteps }) {
 }
 
 /**
- * Correr el simulador para todos los pares "debería contrarrestar" (B en aim de A).
+ * Run the simulator for all "should-counter" pairs (B in A's aim).
  *
  * @param {Object} opts
- * @param {number} opts.seeds - Pruebas por par (default 12).
- * @param {number} opts.distance - Separación inicial en px (default 200).
- * @param {number} opts.dt - DeltaTime fijo en ms (default 16).
- * @param {number} opts.maxSteps - Pasos máx por prueba (default 12000 ≈ 192 s sim).
- * @param {Object} opts.arena - Tamaño del arena.
+ * @param {number} opts.seeds - Trials per pair (default 12).
+ * @param {number} opts.distance - Initial separation in px (default 200).
+ * @param {number} opts.deltaTime - Fixed delta time in ms (default 16).
+ * @param {number} opts.maxSteps - Max steps per trial (default 12000 ≈ 192 s sim).
+ * @param {Object} opts.arena - Arena size.
  */
 export function runMatchupSim({
   seeds = 12,
   distance = 200,
-  dt = 16,
+  deltaTime = 16,
   maxSteps = 12000,
   arena = DEFAULT_ARENA
 } = {}) {
@@ -96,14 +96,14 @@ export function runMatchupSim({
       let victimWins = 0;
       let timeouts = 0;
       let killStepsTotal = 0;
-      for (let s = 0; s < seeds; s++) {
-        const r = runTrial(chaser, victim, { arena, distance, dt, maxSteps });
-        if (r.winner === chaser) {
+      for (let seedIndex = 0; seedIndex < seeds; seedIndex++) {
+        const trialResult = runTrial(chaser, victim, { arena, distance, deltaTime, maxSteps });
+        if (trialResult.winner === chaser) {
           chaserWins += 1;
-          killStepsTotal += r.steps;
-        } else if (r.winner === victim) {
+          killStepsTotal += trialResult.steps;
+        } else if (trialResult.winner === victim) {
           victimWins += 1;
-          killStepsTotal += r.steps;
+          killStepsTotal += trialResult.steps;
         } else {
           timeouts += 1;
         }
@@ -117,38 +117,38 @@ export function runMatchupSim({
         victimWins,
         timeouts,
         killRate: seeds ? (chaserWins / seeds) * 100 : 0,
-        avgKillMs: kills ? (killStepsTotal / kills) * dt : null
+        avgKillMs: kills ? (killStepsTotal / kills) * deltaTime : null
       };
     }
   }
   return { pairs };
 }
 
-function cell(result) {
+function formatCell(result) {
   if (!result) return "  -  ";
-  const pct = result.killRate;
-  if (pct <= 0) return "0%";
-  const tt = result.avgKillMs != null ? `${(result.avgKillMs / 1000).toFixed(1)}s` : "?";
-  const detail = `${pct.toFixed(0)}%·${tt}`;
+  const percent = result.killRate;
+  if (percent <= 0) return "0%";
+  const timeToKill = result.avgKillMs != null ? `${(result.avgKillMs / 1000).toFixed(1)}s` : "?";
+  const detail = `${percent.toFixed(0)}%·${timeToKill}`;
   return detail.padStart(7);
 }
 
 /**
- * Renderizar la matriz de persecución en texto plano.
+ * Render the pursuit matrix in plain text.
  */
-export function formatMatchupReport(res) {
-  const L = [];
-  L.push("Matchup 1v1 (persecucion real, sin cluster)");
-  L.push("Cazador \\ presa     " + TEAMS.map(t => t.padStart(7)).join(""));
+export function formatMatchupReport(result) {
+  const lines = [];
+  lines.push("Matchup 1v1 (real pursuit, no cluster)");
+  lines.push("Chaser \\ prey     " + TEAMS.map(team => team.padStart(7)).join(""));
   for (const chaser of TEAMS) {
     const cells = [chaser.padEnd(17)];
     for (const victim of TEAMS) {
-      cells.push(cell(res.pairs[`${chaser}~${victim}`]));
+      cells.push(formatCell(result.pairs[`${chaser}~${victim}`]));
     }
-    L.push(cells.join(""));
+    lines.push(cells.join(""));
   }
-  L.push("");
-  L.push("Celda: %victorias del cazador sobre la presa en una persecucion 1v1 · tiempo medio de kill.");
-  L.push("0% = el cazador NO alcanza a su presa en persecucion (solo mata en cluster).");
-  return L.join("\n");
+  lines.push("");
+  lines.push("Cell: % chaser wins over prey in 1v1 pursuit · average time to kill.");
+  lines.push("0% = the chaser does NOT catch its prey in pursuit (only kills in cluster).");
+  return lines.join("\n");
 }

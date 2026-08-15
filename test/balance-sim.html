@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -227,89 +227,88 @@
     <main class="wrap">
       <h1>Balance test - rock paper scissors</h1>
       <p class="sub">
-        Simula el motor real del juego sin renderizar y sin tocar tu save (storage aislado en memoria).
-        Config por defecto: sin upgrades, sin powerups, sin capture.
+        Simulates the real game engine without rendering and without touching your save (isolated in-memory storage).
+        Default config: no upgrades, no power-ups, no capture.
       </p>
 
       <details class="help" open>
-        <summary>Cómo funcionan los tests (clic para plegar)</summary>
+        <summary>How the tests work (click to collapse)</summary>
         <div class="help-grid">
           <div class="help-card">
-            <h3>Campaña completa</h3>
+            <h3>Full campaign</h3>
             <p>
-              Simula 1000 partidas reales (10 runs x 100 niveles) a toda velocidad y calcula el % de
-              victorias de cada raza. Equilibrio perfecto = 20%; ±5pp (15-25%) se considera ok.
+              Simulates 1000 real matches (10 runs x 100 levels) at full speed and computes the win %
+              of each race. Perfect balance = 20%; ±5pp (15-25%) is considered ok.
             </p>
             <p class="hint">
-              Es el test del veredicto. Corre siempre con Runs 10 y Niveles 100 para poder comparar
-              entre cambios. Mira la sección "Veredicto" del reporte.
+              This is the verdict test. Always run it with Runs 10 and Levels 100 so it is comparable
+              across changes. Look at the "Verdict" section of the report.
             </p>
           </div>
           <div class="help-card">
             <h3>Matchup 1v1</h3>
             <p>
-              Pone cada cazador contra su presa en persecución pura (12 intentos) y mide % de victorias
-              y tiempo medio hasta el kill (TTK). Un 0% = ese cazador no alcanza a su presa en
-              persecución (solo mata en cluster).
+              Puts each chaser against its prey in pure pursuit (12 attempts) and measures win % and
+              average time to kill (TTK). A 0% = that chaser cannot catch its prey in pursuit (it only
+              kills in clusters).
             </p>
             <p class="hint">
-              Rápido (~10s). Sirve para explicar el comportamiento de la campaña, no para tunear
-              directamente.
+              Fast (~10s). Good for explaining campaign behavior, not for direct tuning.
             </p>
           </div>
           <div class="help-card">
-            <h3>Barrido de sensibilidad (Jacobiano)</h3>
+            <h3>Sensitivity sweep (Jacobian)</h3>
             <p>
-              Mide una base y luego cambia UN stat ±15% a la vez (los demás igual), re-simulando cada
-              vez. La tabla de resultados es el Jacobiano: cuántos puntos porcentuales (pp) se mueve el
-              winrate de cada raza al tocar cada stat.
+              Measures a baseline and then changes ONE stat ±15% at a time (the rest unchanged),
+              re-simulating each time. The results table is the Jacobian: how many percentage points (pp)
+              each race's win rate moves when each stat is touched.
             </p>
             <p class="hint">
-              Así sabes qué palanca girar y en qué dirección. Con 1 run x 60 niveles el ruido es alto;
-              usa 5x200 para cifras fiables.
+              This tells you which lever to turn and in which direction. With 1 run x 60 levels the noise
+              is high; use 5x200 for reliable figures.
             </p>
           </div>
         </div>
       </details>
 
       <section class="card">
-        <h2>Test principal <span class="tag tag-principal">veredicto</span></h2>
-        <p class="card-note">1000 partidas completas del juego real. Este es el reporte que decide si el balance está bien.</p>
+        <h2>Main test <span class="tag tag-principal">verdict</span></h2>
+        <p class="card-note">1000 full matches of the real game. This is the report that decides whether the balance is right.</p>
         <div class="controls">
           <label>Runs <input id="cfg-runs" type="number" value="10" min="1" max="200" /></label>
-          <label>Niveles por run <input id="cfg-levels" type="number" value="100" min="1" max="2000" /></label>
-          <label>dt (ms) <input id="cfg-dt" type="number" value="16" min="4" max="64" /></label>
-          <label class="check"><input id="cfg-powerups" type="checkbox" /> Powerups</label>
+          <label>Levels per run <input id="cfg-levels" type="number" value="100" min="1" max="2000" /></label>
+          <label>deltaTime (ms) <input id="cfg-dt" type="number" value="16" min="4" max="64" /></label>
+          <label class="check"><input id="cfg-powerups" type="checkbox" /> Power-ups</label>
           <label class="check"><input id="cfg-capture" type="checkbox" /> Capture</label>
-          <button id="btn-run" type="button">Ejecutar campaña</button>
-          <button id="btn-stop" type="button" disabled>Detener</button>
+          <button id="btn-run" type="button">Run campaign</button>
+          <button id="btn-stop" type="button" disabled>Stop</button>
         </div>
       </section>
 
       <section class="card">
-        <h2>Diagnóstico <span class="tag tag-diag">explicar, no tunear</span></h2>
-        <p class="card-note">Dos pruebas rápidas para entender qué pasa dentro de la campaña.</p>
+        <h2>Diagnostic <span class="tag tag-diag">explain, not tune</span></h2>
+        <p class="card-note">Two quick tests to understand what happens inside the campaign.</p>
         <div class="controls">
           <label>Seeds 1v1 <input id="cfg-seeds" type="number" value="12" min="1" max="100" /></label>
           <button id="btn-matchup" type="button" class="btn-quick">Matchup 1v1</button>
         </div>
         <div class="controls" style="margin-top: 12px">
-          <label>Runs cortos <input id="sweep-runs" type="number" value="3" min="1" max="20" /></label>
-          <label>Niveles <input id="sweep-levels" type="number" value="150" min="10" max="500" /></label>
-          <label>Perturbación % <input id="sweep-pct" type="number" value="15" min="1" max="100" /></label>
-          <button id="btn-sweep" type="button" class="btn-quick">Barrido de sensibilidad</button>
+          <label>Short runs <input id="sweep-runs" type="number" value="3" min="1" max="20" /></label>
+          <label>Levels <input id="sweep-levels" type="number" value="150" min="10" max="500" /></label>
+          <label>Perturbation % <input id="sweep-pct" type="number" value="15" min="1" max="100" /></label>
+          <button id="btn-sweep" type="button" class="btn-quick">Sensitivity sweep</button>
         </div>
       </section>
 
       <div class="status">
         <progress id="progress" max="100" value="0"></progress>
-        <span id="status-text">Listo</span>
+        <span id="status-text">Ready</span>
       </div>
 
       <pre id="report"></pre>
     </main>
 
-    <!-- Elementos que el constructor de Game espera (se mantienen ocultos) -->
+    <!-- Elements the Game constructor expects (kept hidden) -->
     <div hidden>
       <canvas id="canvas1" width="640" height="384"></canvas>
       <div id="score-list"></div>
@@ -323,53 +322,53 @@
       import { runMatchupSim, formatMatchupReport } from "../src/testing/matchupSim.js";
       import { RACE_STATS, GAME_CONFIG } from "../src/config/gameConfig.js";
 
-      const el = id => document.getElementById(id);
-      const reportEl = el("report");
-      const statusEl = el("status-text");
-      const progressEl = el("progress");
-      const btnRun = el("btn-run");
-      const btnStop = el("btn-stop");
-      const btnMatchup = el("btn-matchup");
-      const btnSweep = el("btn-sweep");
+      const getElement = id => document.getElementById(id);
+      const reportElement = getElement("report");
+      const statusElement = getElement("status-text");
+      const progressElement = getElement("progress");
+      const runButton = getElement("btn-run");
+      const stopButton = getElement("btn-stop");
+      const matchupButton = getElement("btn-matchup");
+      const sweepButton = getElement("btn-sweep");
 
       let cancelRequested = false;
       let busy = false;
 
       function setBusy(state) {
         busy = state;
-        btnRun.disabled = state;
-        btnStop.disabled = !state;
-        btnMatchup.disabled = state;
-        btnSweep.disabled = state;
+        runButton.disabled = state;
+        stopButton.disabled = !state;
+        matchupButton.disabled = state;
+        sweepButton.disabled = state;
       }
 
-      btnRun.addEventListener("click", startCampaign);
-      btnMatchup.addEventListener("click", runMatchup);
-      btnSweep.addEventListener("click", runSweep);
-      btnStop.addEventListener("click", () => {
+      runButton.addEventListener("click", startCampaign);
+      matchupButton.addEventListener("click", runMatchup);
+      sweepButton.addEventListener("click", runSweep);
+      stopButton.addEventListener("click", () => {
         cancelRequested = true;
       });
 
       function isCancelled() {
         if (!cancelRequested) return false;
-        statusEl.textContent = "Cancelado";
+        statusElement.textContent = "Cancelled";
         return true;
       }
 
       async function startCampaign() {
         cancelRequested = false;
         setBusy(true);
-        reportEl.textContent = "";
+        reportElement.textContent = "";
 
-        const runs = Math.max(1, +el("cfg-runs").value || 10);
-        const levels = Math.max(1, +el("cfg-levels").value || 100);
-        const dt = Math.max(4, +el("cfg-dt").value || 16);
-        const powerups = el("cfg-powerups").checked;
-        const capture = el("cfg-capture").checked;
+        const runs = Math.max(1, +getElement("cfg-runs").value || 10);
+        const levels = Math.max(1, +getElement("cfg-levels").value || 100);
+        const deltaTime = Math.max(4, +getElement("cfg-dt").value || 16);
+        const powerups = getElement("cfg-powerups").checked;
+        const capture = getElement("cfg-capture").checked;
 
         const totalMatches = runs * levels;
         const results = [];
-        const t0 = performance.now();
+        const startTime = performance.now();
         let doneMatches = 0;
 
         for (let i = 0; i < runs; i++) {
@@ -377,55 +376,55 @@
           try {
             run = await runCampaign({
               maxLevel: levels,
-              dt,
+              deltaTime,
               capture,
               powerups,
               onProgress: ({ match }) => {
                 if (cancelRequested) return true;
                 doneMatches = i * levels + Math.max(0, match - 1);
-                const pct = (doneMatches / totalMatches) * 100;
-                progressEl.value = pct;
-                statusEl.textContent = `Run ${i + 1}/${runs} · nivel ${match} · ${pct.toFixed(1)}%`;
+                const percent = (doneMatches / totalMatches) * 100;
+                progressElement.value = percent;
+                statusElement.textContent = `Run ${i + 1}/${runs} · level ${match} · ${percent.toFixed(1)}%`;
                 return false;
               }
             });
           } catch (err) {
-            statusEl.textContent = "Error: " + err.message;
+            statusElement.textContent = "Error: " + err.message;
             console.error("[balance] error:", err);
             break;
           }
           if (isCancelled()) break;
           results.push(run);
           doneMatches = (i + 1) * levels;
-          progressEl.value = (doneMatches / totalMatches) * 100;
-          statusEl.textContent = `Run ${i + 1}/${runs} completado`;
+          progressElement.value = (doneMatches / totalMatches) * 100;
+          statusElement.textContent = `Run ${i + 1}/${runs} completed`;
         }
 
-        const secs = ((performance.now() - t0) / 1000).toFixed(1);
+        const seconds = ((performance.now() - startTime) / 1000).toFixed(1);
         if (results.length) {
-          const agg = aggregateRuns(results);
-          reportEl.textContent = formatReport(agg, { thresholdPp: 5 });
-          console.log("[balance] aggregate:", JSON.stringify(agg, null, 2));
+          const aggregate = aggregateRuns(results);
+          reportElement.textContent = formatReport(aggregate, { thresholdPp: 5 });
+          console.log("[balance] aggregate:", JSON.stringify(aggregate, null, 2));
           console.log("[balance] runs:", JSON.stringify(results, null, 2));
         }
-        statusEl.textContent =
-          `${results.length} runs en ${secs}s` +
-          (cancelRequested ? " (cancelado)" : "") +
-          (powerups || capture ? ` · con${powerups ? " powerups" : ""}${capture ? " + capture" : ""}` : "");
+        statusElement.textContent =
+          `${results.length} runs in ${seconds}s` +
+          (cancelRequested ? " (cancelled)" : "") +
+          (powerups || capture ? ` · with${powerups ? " power-ups" : ""}${capture ? " + capture" : ""}` : "");
         cancelRequested = false;
         setBusy(false);
       }
 
       function runMatchup() {
-        const seeds = Math.max(1, +el("cfg-seeds").value || 12);
-        statusEl.textContent = `Matchup 1v1 con ${seeds} semillas...`;
-        const res = runMatchupSim({ seeds });
-        reportEl.textContent = formatMatchupReport(res);
-        console.log("[balance] matchup:", JSON.stringify(res, null, 2));
-        statusEl.textContent = `Matchup 1v1 listo (${seeds} semillas)`;
+        const seeds = Math.max(1, +getElement("cfg-seeds").value || 12);
+        statusElement.textContent = `Matchup 1v1 with ${seeds} seeds...`;
+        const result = runMatchupSim({ seeds });
+        reportElement.textContent = formatMatchupReport(result);
+        console.log("[balance] matchup:", JSON.stringify(result, null, 2));
+        statusElement.textContent = `Matchup 1v1 ready (${seeds} seeds)`;
       }
 
-      // ---------- Barrido de sensibilidad ----------
+      // ---------- Sensitivity sweep ----------
 
       const SWEEP_STAT_PATHS = [
         ["baseSpeed", "movement.baseSpeed"],
@@ -450,43 +449,43 @@
         target[last] = value;
       }
 
-      async function runShort(runs, levels, dt, onProgress) {
+      async function runShort(runs, levels, deltaTime, onProgress) {
         const results = [];
         for (let i = 0; i < runs; i++) {
-          results.push(await runCampaign({ maxLevel: levels, dt, onProgress }));
+          results.push(await runCampaign({ maxLevel: levels, deltaTime, onProgress }));
           if (cancelRequested) break;
         }
         return results.length ? aggregateRuns(results) : null;
       }
 
-      function winRates(agg) {
+      function winRates(aggregate) {
         const out = {};
-        if (agg) for (const team of TEAMS) out[team] = agg.teams[team].winRate;
+        if (aggregate) for (const team of TEAMS) out[team] = aggregate.teams[team].winRate;
         return out;
       }
 
-      function labelOf(cfg) {
-        if (cfg.timer === "base") return `timer.base ${cfg.dir > 0 ? "+" : ""}${cfg.dir * cfg.pct}%`;
-        if (cfg.timer === "growth") return `timer.growth ${cfg.dir > 0 ? "+" : ""}${cfg.dir * cfg.pct}%`;
-        if (cfg.ai === "dangerRadius") return `ai.dangerRadius ${cfg.dir > 0 ? "+" : ""}${cfg.dir * cfg.pct}%`;
-        return `${cfg.team}.${cfg.name} ${cfg.dir > 0 ? "+" : ""}${cfg.dir * cfg.pct}%`;
+      function labelOf(config) {
+        if (config.timer === "base") return `timer.base ${config.direction > 0 ? "+" : ""}${config.direction * config.percent}%`;
+        if (config.timer === "growth") return `timer.growth ${config.direction > 0 ? "+" : ""}${config.direction * config.percent}%`;
+        if (config.ai === "dangerRadius") return `ai.dangerRadius ${config.direction > 0 ? "+" : ""}${config.direction * config.percent}%`;
+        return `${config.team}.${config.name} ${config.direction > 0 ? "+" : ""}${config.direction * config.percent}%`;
       }
 
       async function runSweep() {
         cancelRequested = false;
         setBusy(true);
-        reportEl.textContent = "";
+        reportElement.textContent = "";
 
-        const runs = Math.max(1, +el("sweep-runs").value || 1);
-        const levels = Math.max(10, +el("sweep-levels").value || 60);
-        const dt = Math.max(4, +el("cfg-dt").value || 16);
-        const pct = Math.max(1, +el("sweep-pct").value || 15);
+        const runs = Math.max(1, +getElement("sweep-runs").value || 1);
+        const levels = Math.max(10, +getElement("sweep-levels").value || 60);
+        const deltaTime = Math.max(4, +getElement("cfg-dt").value || 16);
+        const percent = Math.max(1, +getElement("sweep-pct").value || 15);
 
-        statusEl.textContent = "Baseline...";
-        progressEl.value = 0;
-        const base = winRates(await runShort(runs, levels, dt));
+        statusElement.textContent = "Baseline...";
+        progressElement.value = 0;
+        const base = winRates(await runShort(runs, levels, deltaTime));
         if (!base) {
-          statusEl.textContent = "Cancelado";
+          statusElement.textContent = "Cancelled";
           setBusy(false);
           return;
         }
@@ -502,95 +501,95 @@
         const configs = [];
         for (const team of TEAMS)
           for (const [name, path] of SWEEP_STAT_PATHS)
-            for (const dir of [-1, 1]) configs.push({ team, name, path, dir, pct });
-        for (const timer of ["base", "growth"]) for (const dir of [-1, 1]) configs.push({ timer, dir, pct });
-        for (const dir of [-1, 1]) configs.push({ ai: "dangerRadius", dir, pct });
+            for (const direction of [-1, 1]) configs.push({ team, name, path, direction, percent });
+        for (const timer of ["base", "growth"]) for (const direction of [-1, 1]) configs.push({ timer, direction, percent });
+        for (const direction of [-1, 1]) configs.push({ ai: "dangerRadius", direction, percent });
 
         const rows = [];
         for (let i = 0; i < configs.length; i++) {
-          const cfg = configs[i];
+          const config = configs[i];
           if (isCancelled()) break;
-          statusEl.textContent = `Barrido ${i + 1}/${configs.length} · ${labelOf(cfg)}`;
-          progressEl.value = (i / configs.length) * 100;
+          statusElement.textContent = `Sweep ${i + 1}/${configs.length} · ${labelOf(config)}`;
+          progressElement.value = (i / configs.length) * 100;
 
-          if (cfg.timer === "base") {
-            GAME_CONFIG.mechanics.matchTimeBaseMs = Math.max(1000, timerBase * (1 + (cfg.dir * pct) / 100));
-          } else if (cfg.timer === "growth") {
-            GAME_CONFIG.mechanics.matchTimeGrowthMs = Math.max(0, timerGrowth * (1 + (cfg.dir * pct) / 100));
-          } else if (cfg.ai === "dangerRadius") {
-            GAME_CONFIG.mechanics.ai.dangerRadius = Math.max(20, dangerBase * (1 + (cfg.dir * pct) / 100));
+          if (config.timer === "base") {
+            GAME_CONFIG.mechanics.matchTimeBaseMs = Math.max(1000, timerBase * (1 + (config.direction * percent) / 100));
+          } else if (config.timer === "growth") {
+            GAME_CONFIG.mechanics.matchTimeGrowthMs = Math.max(0, timerGrowth * (1 + (config.direction * percent) / 100));
+          } else if (config.ai === "dangerRadius") {
+            GAME_CONFIG.mechanics.ai.dangerRadius = Math.max(20, dangerBase * (1 + (config.direction * percent) / 100));
           } else {
-            const cur = readPath(RACE_STATS[cfg.team], cfg.path);
-            writePath(RACE_STATS[cfg.team], cfg.path, Math.max(Math.abs(cur) * 0.01, cur * (1 + (cfg.dir * pct) / 100)));
+            const current = readPath(RACE_STATS[config.team], config.path);
+            writePath(RACE_STATS[config.team], config.path, Math.max(Math.abs(current) * 0.01, current * (1 + (config.direction * percent) / 100)));
           }
 
           let rates = null;
           try {
-            const agg = await runShort(runs, levels, dt, ({ match }) => {
+            const aggregate = await runShort(runs, levels, deltaTime, ({ match }) => {
               if (cancelRequested) return true;
-              statusEl.textContent = `Barrido ${i + 1}/${configs.length} · ${labelOf(cfg)} · nivel ${match}`;
+              statusElement.textContent = `Sweep ${i + 1}/${configs.length} · ${labelOf(config)} · level ${match}`;
               return false;
             });
-            rates = winRates(agg);
+            rates = winRates(aggregate);
           } finally {
-            if (cfg.timer === "base") GAME_CONFIG.mechanics.matchTimeBaseMs = timerBase;
-            else if (cfg.timer === "growth") GAME_CONFIG.mechanics.matchTimeGrowthMs = timerGrowth;
-            else if (cfg.ai === "dangerRadius") GAME_CONFIG.mechanics.ai.dangerRadius = dangerBase;
-            else writePath(RACE_STATS[cfg.team], cfg.path, baseline[`${cfg.team}.${cfg.path}`]);
+            if (config.timer === "base") GAME_CONFIG.mechanics.matchTimeBaseMs = timerBase;
+            else if (config.timer === "growth") GAME_CONFIG.mechanics.matchTimeGrowthMs = timerGrowth;
+            else if (config.ai === "dangerRadius") GAME_CONFIG.mechanics.ai.dangerRadius = dangerBase;
+            else writePath(RACE_STATS[config.team], config.path, baseline[`${config.team}.${config.path}`]);
           }
 
-          if (rates) rows.push({ cfg, rates, base });
+          if (rates) rows.push({ config, rates, base });
         }
 
         if (rows.length) {
-          reportEl.textContent = formatSweepReport({ base, rows, pct });
+          reportElement.textContent = formatSweepReport({ base, rows, percent });
           console.log("[balance] sweep:", JSON.stringify({ base, rows }, null, 2));
         }
-        statusEl.textContent = `Barrido: ${rows.length} configs` + (cancelRequested ? " (cancelado)" : "");
+        statusElement.textContent = `Sweep: ${rows.length} configs` + (cancelRequested ? " (cancelled)" : "");
         cancelRequested = false;
         setBusy(false);
       }
 
-      function formatSweepReport({ base, rows, pct }) {
-        const L = [];
+      function formatSweepReport({ base, rows, percent }) {
+        const lines = [];
         const baseStr = Object.entries(base)
-          .map(([t, v]) => `${t} ${v.toFixed(1)}%`)
+          .map(([team, value]) => `${team} ${value.toFixed(1)}%`)
           .join(", ");
-        L.push(`Barrido de sensibilidad ±${pct}% (baseline: ${baseStr})`);
-        L.push("Celdas: delta en puntos porcentuales respecto al baseline");
-        L.push("");
-        const rowCells = cells =>
-          cells.map((c, i) => (i === 0 ? c.padEnd(24) : c.padStart(9))).join(" ");
-        L.push(rowCells(["Perturbacion"].concat(TEAMS)));
-        for (const r of rows) {
-          const cells = [labelOf(r.cfg)];
+        lines.push(`Sensitivity sweep ±${percent}% (baseline: ${baseStr})`);
+        lines.push("Cells: delta in percentage points vs baseline");
+        lines.push("");
+        const formatRow = cells =>
+          cells.map((cell, i) => (i === 0 ? cell.padEnd(24) : cell.padStart(9))).join(" ");
+        lines.push(formatRow(["Perturbation"].concat(TEAMS)));
+        for (const row of rows) {
+          const cells = [labelOf(row.config)];
           for (const team of TEAMS) {
-            const d = (r.rates[team] ?? 0) - (r.base[team] ?? 0);
-            cells.push((d >= 0 ? "+" : "") + d.toFixed(1));
+            const delta = (row.rates[team] ?? 0) - (row.base[team] ?? 0);
+            cells.push((delta >= 0 ? "+" : "") + delta.toFixed(1));
           }
-          L.push(rowCells(cells));
+          lines.push(formatRow(cells));
         }
-        L.push("");
-        L.push("Mejores palancas por equipo (% de cambio del stat por +1pp / -1pp):");
+        lines.push("");
+        lines.push("Best levers per team (% stat change for +1pp / -1pp):");
         for (const team of TEAMS) {
-          const statRows = rows.filter(r => r.cfg.team);
+          const statRows = rows.filter(row => row.config.team);
           const sorted = [...statRows].sort(
-            (a, b) => (b.rates[team] ?? 0) - (b.base[team] ?? 0) - ((a.rates[team] ?? 0) - (a.base[team] ?? 0))
+            (first, second) => (second.rates[team] ?? 0) - (second.base[team] ?? 0) - ((first.rates[team] ?? 0) - (first.base[team] ?? 0))
           );
           const up = sorted[0];
           const down = sorted[sorted.length - 1];
           const upDelta = up ? (up.rates[team] ?? 0) - (up.base[team] ?? 0) : 0;
           const downDelta = down ? (down.rates[team] ?? 0) - (down.base[team] ?? 0) : 0;
-          const upPct = upDelta !== 0 ? (pct / upDelta).toFixed(1) : "?";
-          const downPct = downDelta !== 0 ? (pct / Math.abs(downDelta)).toFixed(1) : "?";
-          L.push(
-            `  ${team.padEnd(10)} subir: ${up ? labelOf(up.cfg) : "-"} (~${upPct}%/pp)   ` +
-              `bajar: ${down ? labelOf(down.cfg) : "-"} (~${downPct}%/pp)`
+          const upPercent = upDelta !== 0 ? (percent / upDelta).toFixed(1) : "?";
+          const downPercent = downDelta !== 0 ? (percent / Math.abs(downDelta)).toFixed(1) : "?";
+          lines.push(
+            `  ${team.padEnd(10)} raise: ${up ? labelOf(up.config) : "-"} (~${upPercent}%/pp)   ` +
+              `lower: ${down ? labelOf(down.config) : "-"} (~${downPercent}%/pp)`
           );
         }
-        L.push("");
-        L.push("Nota: el barrido restaura la config al final. Perturba un stat cada vez.");
-        return L.join("\n");
+        lines.push("");
+        lines.push("Note: the sweep restores the config at the end. Perturbs one stat at a time.");
+        return lines.join("\n");
       }
     </script>
   </body>

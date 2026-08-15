@@ -1,67 +1,37 @@
-/**
- * Enemy - Entidad base de las razas
- * Extraída del index.js original
- * Lee sus estadísticas de RACE_STATS (config) en vez de hardcodearlas
- * Aplica modifiers (mejoras del jugador) y buffs (powerups)
- */
-
-import { RACE_STATS, GAME_CONFIG } from "../config/gameConfig.js";
+import { RACE_STATS } from "../config/gameConfig.js";
 import { CollisionDetector } from "../canvas/geometry/CollisionDetector.js";
-import { pickEscapePoint } from "../canvas/geometry/EscapeSolver.js";
-
-/**
- * Mapa estático: para cada equipo, qué equipos pueden dañarlo (predadores).
- * Derivado una vez de RACE_STATS.aim (caza asimétrica).
- */
-const PREDATORS = {};
-for (const team of Object.keys(RACE_STATS)) {
-  PREDATORS[team] = Object.keys(RACE_STATS).filter(predator =>
-    RACE_STATS[predator].aim.includes(team)
-  );
-}
+import { BuffManager } from "./BuffManager.js";
+import { MovementController } from "./MovementController.js";
+import { TargetingSystem } from "./TargetingSystem.js";
+import { CombatSystem } from "./CombatSystem.js";
+import { EnemyRenderer } from "./EnemyRenderer.js";
 
 export class Enemy {
   constructor({ game, x = null, y = null, angle = null, modifiers = null }, team = "rocks") {
     this.team = team;
     const stats = RACE_STATS[team];
-    const scale = game.canvasManager.getScale();
     const {
-      hp = 1,
+      health = 1,
       damage = 1,
-      speed = 1,
-      accel = 1,
-      turn = 1,
-      decel = 1,
-      regen = 0,
+      regeneration = 0,
       armor = 0,
       vampire = 0
     } = modifiers || {};
-    const m = stats.movement;
 
     this.emoji = stats.emoji;
     this.color = stats.color;
     this.aim = [...stats.aim];
+    this.rotationOffset = stats.rotationOffset || 0;
 
     this.game = game;
-    this.ctx = this.game.canvasManager.getCtx();
-    const spawn = this.game.canvasManager.getRandomSpawnPoint();
+    this.context = this.game.canvasAdapter.getContext();
+    const spawn = this.game.canvasAdapter.getRandomSpawnPoint();
     this.x = x || spawn.x;
     this.y = y || spawn.y;
-
-    this.speed = (m.baseSpeed + Math.random() * m.speedVariance) * speed * scale;
-    this.maxSpeed = m.maxSpeed * speed * (scale * 1.5);
-    this.minSpeed = m.minSpeed;
-    this.acceleration = m.acceleration * accel * scale * 2;
-    this.deceleration = m.deceleration * accel * decel * scale;
-    this.rotationSpeed = m.rotationSpeed * turn * (1 + scale);
-    this.rotationAcceleration = m.rotationAcceleration * turn * (1 + scale);
     this.angle = angle || Math.random() * 2 * Math.PI;
 
     this.width = 20;
     this.height = 20;
-    this.vx = 0;
-    this.vy = 0;
-    this.angularVelocity = 0;
     this.aimX = null;
     this.aimY = null;
     this.closest = null;
@@ -70,288 +40,110 @@ export class Enemy {
     this.offScreen = false;
     this.fleeing = false;
 
-    this.maxLife = Math.round(stats.health.max * hp);
+    this.maxLife = Math.round(stats.health.max * health);
     this.life = this.maxLife;
-    this.baseDamage = stats.damage.amount;
-    this.damageMultiplier = damage;
+    this.regeneration = regeneration;
+    this.modifiers = modifiers;
 
-    this.regen = regen;
-    this.armor = armor;
-    this.vampire = vampire;
-
-    this.buffs = {};
+    this.buffManager = new BuffManager(() => this.game.gameTime);
+    this.movementController = new MovementController({
+      entity: this,
+      stats,
+      buffManager: this.buffManager,
+      canvasAdapter: this.game.canvasAdapter,
+      options: this.game.options
+    });
+    this.targetingSystem = new TargetingSystem(this, this.game.canvasAdapter, this.buffManager);
+    this.combatSystem = new CombatSystem({
+      entity: this,
+      baseDamage: stats.damage.amount,
+      damageMultiplier: damage,
+      armor,
+      vampire,
+      buffManager: this.buffManager,
+      scoreManager: this.game.scoreManager
+    });
+    this.renderer = new EnemyRenderer(this, this.context, this.game.canvasAdapter, this.game.options);
   }
 
-  /**
-   * Aplicar un buff/debuff temporal (usando gameTime del juego)
-   */
   applyBuff(type, duration, amount) {
-    this.buffs[type] = { until: this.game.gameTime + duration, amount };
+    this.buffManager.applyBuff(type, duration, amount);
   }
 
-  /**
-   * Comprobar si un buff sigue activo (y limpiarlo si expiró)
-   */
   isBuffActive(type) {
-    const buff = this.buffs[type];
-    if (!buff) return false;
-    if (this.game.gameTime > buff.until) {
-      delete this.buffs[type];
-      return false;
-    }
-    return true;
-  }
-
-  getSpeedMultiplier() {
-    let mult = 1;
-    if (this.isBuffActive("speed")) mult *= this.buffs.speed.amount;
-    if (this.isBuffActive("slow")) mult *= this.buffs.slow.amount;
-    if (this.isBuffActive("freeze")) mult *= this.buffs.freeze.amount;
-    return mult;
-  }
-
-  getAccelMultiplier() {
-    return this.isBuffActive("haste") ? this.buffs.haste.amount : 1;
-  }
-
-  getTurnMultiplier() {
-    return this.isBuffActive("turn") ? this.buffs.turn.amount : 1;
-  }
-
-  getDamage() {
-    let damage = this.baseDamage * this.damageMultiplier;
-    if (this.isBuffActive("damage")) damage *= this.buffs.damage.amount;
-    return damage;
+    return this.buffManager.isBuffActive(type);
   }
 
   getIncomingDamageMultiplier() {
-    if (this.isBuffActive("armor")) return this.buffs.armor.amount;
-    return Math.max(0, 1 - this.armor);
+    return this.combatSystem.getIncomingDamageMultiplier();
   }
 
-  #kill(enemy) {
-    if (this.aim.includes(enemy.team)) {
-      const damage = this.getDamage() * enemy.getIncomingDamageMultiplier();
-      enemy.life -= damage;
-      const healRatio = this.isBuffActive("vampire") ? this.buffs.vampire.amount : this.vampire;
-      if (healRatio > 0 && damage > 0) {
-        this.life = Math.min(this.maxLife, this.life + damage * healRatio);
-      }
-      if (enemy.life <= 0) {
-        enemy.dead = true;
-        enemy.killedBy = this.team;
-        this.game.scoreManager.recordKill(this.team, enemy.team);
-      }
-    }
+  getDamage() {
+    return this.combatSystem.getDamage();
   }
 
-  #checkCollision(allEnemies) {
-    for (const enemy of allEnemies) {
-      if (enemy !== this && CollisionDetector.checkOverlap(this, enemy)) {
-        this.#kill(enemy);
-      }
-    }
+  getSpeedMultiplier() {
+    return this.buffManager.getSpeedMultiplier();
   }
 
-  #checkPosition() {
-    const canvasSize = this.game.canvasManager.getSize();
+  getAccelMultiplier() {
+    return this.buffManager.getMultiplier("haste");
+  }
+
+  getTurnMultiplier() {
+    return this.buffManager.getMultiplier("turn");
+  }
+
+  // Compatibilidad tests - métodos en vez getters (deepFreeze safe)
+  get speed() {
+    return this.movementController?.speed;
+  }
+
+  get acceleration() {
+    return this.movementController?.acceleration;
+  }
+
+  get deceleration() {
+    return this.movementController?.deceleration;
+  }
+
+  get baseDamage() {
+    return this.combatSystem?.baseDamage;
+  }
+
+  get damageMultiplier() {
+    return this.combatSystem?.damageMultiplier;
+  }
+
+  checkPosition() {
+    const canvasSize = this.game.canvasAdapter.getSize();
     this.offScreen = !CollisionDetector.isVisible(this.x, this.y, this.width, this.height, canvasSize);
     if (this.offScreen && this.game.options.mechanics.outDies) {
       this.dead = true;
     }
   }
 
-  #limitPosition() {
-    const clamped = this.game.canvasManager.clampPosition(this);
-    this.x = clamped.x;
-    this.y = clamped.y;
-  }
-
-  #limitSpeed() {
-    const speedMult = this.getSpeedMultiplier();
-    if (this.speed > this.maxSpeed * speedMult) {
-      this.speed = this.maxSpeed * speedMult;
-    }
-    if (this.speed < this.minSpeed * speedMult) {
-      this.speed = this.minSpeed * speedMult;
-    }
-  }
-
-  #calculateAngleDiff() {
-    const angleDiff = this.angle - Math.atan2(this.aimY - this.y, this.aimX - this.x);
-    if (angleDiff > Math.PI) {
-      return angleDiff - 2 * Math.PI;
-    }
-    if (angleDiff < -Math.PI) {
-      return angleDiff + 2 * Math.PI;
-    }
-    return angleDiff;
-  }
-
-  #calculateRotationSpeed(angleDiff) {
-    const turnMult = this.getTurnMultiplier();
-    const maxAngular = this.rotationSpeed * turnMult;
-    const accel = this.rotationAcceleration * turnMult;
-    this.angularVelocity += (angleDiff < 0 ? 1 : -1) * accel;
-    if (this.angularVelocity > maxAngular) {
-      this.angularVelocity = maxAngular;
-    }
-    if (this.angularVelocity < -maxAngular) {
-      this.angularVelocity = -maxAngular;
-    }
-    this.angle += this.angularVelocity;
-  }
-
-  #calculateSpeed(angleDiff) {
-    const speedMult = this.getSpeedMultiplier();
-    const accelMult = this.getAccelMultiplier();
-    if (Math.abs(angleDiff) < Math.PI / 12) {
-      this.speed += this.acceleration * speedMult * accelMult;
-    }
-    if (Math.abs(angleDiff) > Math.PI / 8) {
-      this.speed -= this.deceleration * speedMult * accelMult;
-    }
-
-    this.#limitSpeed();
-  }
-
-  #goCenter() {
-    const { x, y } = this.game.canvasManager.getCenter();
-    this.aimX = x;
-    this.aimY = y;
-  }
-
-  #flee(allEnemies) {
-    const { dangerRadius, escape } = GAME_CONFIG.mechanics.ai;
-    let threat = null;
-    for (const enemy of allEnemies) {
-      if (enemy.dead || !PREDATORS[this.team].includes(enemy.team)) continue;
-      const dx = this.x - enemy.x;
-      const dy = this.y - enemy.y;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < dangerRadius * dangerRadius && (!threat || d2 < threat.d2)) {
-        threat = { x: enemy.x, y: enemy.y, d2 };
-      }
-    }
-    if (!threat) return false;
-    const aim = pickEscapePoint(
-      { x: this.x, y: this.y },
-      { x: threat.x, y: threat.y },
-      this.game.canvasManager.getSize(),
-      { ...escape, radius: dangerRadius }
-    );
-    this.aimX = aim.x;
-    this.aimY = aim.y;
-    return true;
-  }
-
-  #setTarget(allEnemies) {
-    if (this.isBuffActive("confusion")) {
-      this.closest = null;
-      this.fleeing = false;
-      this.aimX = Math.random() * this.game.canvasManager.getWidth();
-      this.aimY = Math.random() * this.game.canvasManager.getHeight();
-      return;
-    }
-    this.closest = null;
-    for (const enemy of allEnemies) {
-      if (this.aim.includes(enemy.team) && !enemy.dead) {
-        if (this.closest) {
-          if (
-            Math.sqrt(Math.pow(this.x - enemy.x, 2) + Math.pow(this.y - enemy.y, 2)) <
-            Math.sqrt(Math.pow(this.x - this.closest.x, 2) + Math.pow(this.y - this.closest.y, 2))
-          ) {
-            this.closest = enemy;
-          }
-        } else {
-          this.closest = enemy;
-        }
-      }
-    }
-    if (this.closest) {
-      this.aimX = this.closest.x;
-      this.aimY = this.closest.y;
-      this.fleeing = false;
-    } else {
-      this.fleeing = this.#flee(allEnemies);
-      if (!this.fleeing) this.#goCenter();
-    }
-  }
-
   move(deltaTime) {
-    const d = deltaTime / 30;
-    const angleDiff = this.#calculateAngleDiff();
-    this.#calculateRotationSpeed(angleDiff);
-    this.#calculateSpeed(angleDiff);
-    this.vx = Math.cos(this.angle) * this.speed;
-    this.vy = Math.sin(this.angle) * this.speed;
-    this.x += this.vx * d;
-    this.y += this.vy * d;
-
-    if (this.game.options.mechanics.limitCanvas) {
-      this.#limitPosition();
-    }
+    this.movementController.move(deltaTime);
   }
 
   update(deltaTime, allEnemies) {
-    const regen = this.isBuffActive("regen") ? this.buffs.regen.amount : this.regen;
-    if (regen > 0) {
-      this.life = Math.min(this.maxLife, this.life + regen * (deltaTime / 1000));
+    const regenerationBuff = this.buffManager.getMultiplier("regeneration");
+    const regeneration = regenerationBuff !== null ? regenerationBuff : this.regeneration;
+    if (regeneration > 0) {
+      this.life = Math.min(this.maxLife, this.life + regeneration * (deltaTime / 1000));
     }
-    this.#checkPosition();
-    this.#setTarget(allEnemies);
+    this.checkPosition();
+    this.targetingSystem.setTarget(allEnemies);
     this.move(deltaTime);
-    this.#checkCollision(allEnemies);
-  }
-
-  #drawRectangle() {
-    this.ctx.fillStyle = this.color;
-    this.ctx.fillRect(this.x, this.y, this.width, this.height);
-  }
-
-  #drawLineToAim() {
-    if (
-      this.aimX === this.game.canvasManager.getWidth() / 2 &&
-      this.aimY === this.game.canvasManager.getHeight() / 2
-    )
-      return;
-    this.ctx.strokeStyle = this.color;
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.x + this.width / 2, this.y + this.height / 2);
-    this.ctx.lineTo(this.aimX + this.width / 2, this.aimY + this.height / 2);
-    this.ctx.stroke();
-  }
-
-  #drawHealthBar() {
-    const frac = Math.max(0, Math.min(1, this.life / this.maxLife));
-    const x = this.x;
-    const y = this.y - 10;
-    const w = this.width;
-    const h = 6;
-    this.ctx.save();
-    this.ctx.fillStyle = "rgba(30,30,30,0.9)";
-    this.ctx.fillRect(x, y, w, h);
-    this.ctx.fillStyle = `hsl(${frac * 120}, 85%, 50%)`;
-    this.ctx.fillRect(x, y, w * frac, h);
-    this.ctx.strokeStyle = "rgba(255,255,255,0.25)";
-    this.ctx.strokeRect(x - 0.5, y - 0.5, w + 1, h + 1);
-    this.ctx.restore();
+    this.combatSystem.checkCollision(allEnemies);
   }
 
   draw() {
-    this.#drawHealthBar();
-    this.game.options.effects.collider && this.#drawRectangle();
-    this.game.options.effects.debug && this.#drawLineToAim();
-    this.ctx.font = "20px Arial";
-    this.drawEmoji();
+    this.renderer.draw();
   }
 
   drawEmoji() {
-    this.ctx.save();
-    this.ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
-    this.ctx.rotate(this.angle + Math.PI / 2);
-    this.ctx.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
-    this.ctx.fillText(this.emoji, this.x - 2.5, this.y + 16);
-    this.ctx.restore();
+    this.renderer.drawEmoji();
   }
 }

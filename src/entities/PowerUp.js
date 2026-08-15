@@ -1,18 +1,13 @@
-/**
- * PowerUp - Item de efecto aleatorio que spawnea en el mapa
- * Se recoge por colisión con cualquier entidad
- * Positivo o trampa según POWERUP_TYPES
- */
-
-import { POWERUP_TYPES } from "../config/gameConfig.js";
+import { POWERUP_TYPES, GAME_CONFIG } from "../config/gameConfig.js";
+import { GLOBAL_EFFECT_HANDLERS, TARGET_EFFECT_HANDLERS } from "./powerupHandlers.js";
 
 export class PowerUp {
   constructor({ game }) {
     this.game = game;
-    this.ctx = this.game.canvasManager.getCtx();
+    this.context = this.game.canvasAdapter.getContext();
     this.type = this.#pickType();
     const config = POWERUP_TYPES[this.type];
-    const spawn = this.game.canvasManager.getRandomSpawnPoint();
+    const spawn = this.game.canvasAdapter.getRandomSpawnPoint();
 
     this.x = spawn.x;
     this.y = spawn.y;
@@ -24,8 +19,8 @@ export class PowerUp {
     this.bornAt = this.game.gameTime;
     this.pulse = 0;
     this.dead = false;
-    this.vx = (Math.random() * 2 - 1) * 1.1;
-    this.vy = (Math.random() * 2 - 1) * 1.1;
+    this.velocityX = (Math.random() * 2 - 1) * 1.1;
+    this.velocityY = (Math.random() * 2 - 1) * 1.1;
   }
 
   #pickType() {
@@ -35,6 +30,7 @@ export class PowerUp {
       roll -= config.weight;
       if (roll <= 0) return key;
     }
+
     return "heal";
   }
 
@@ -42,55 +38,49 @@ export class PowerUp {
     return this.game.gameTime - this.bornAt > this.lifetime;
   }
 
-  /**
-   * Deriva lentamente rebotando en los bordes del canvas.
-   */
+  #updateAxis({ velocity, coordinate, dimensionName, dimension, frameFactor, margin }) {
+    let updatedCoordinate = coordinate + velocity * frameFactor;
+    let updatedVelocity = velocity;
+
+    if (updatedCoordinate < margin) {
+      updatedCoordinate = margin;
+      updatedVelocity = Math.abs(velocity);
+    } else if (updatedCoordinate > dimension - this[dimensionName] - margin) {
+      updatedCoordinate = dimension - this[dimensionName] - margin;
+      updatedVelocity = -Math.abs(velocity);
+    }
+
+    return { updatedCoordinate, updatedVelocity };
+  }
+
   update(deltaTime) {
     if (this.isExpired()) {
       this.dead = true;
       return;
     }
-    const d = deltaTime / 30;
-    const { width, height } = this.game.canvasManager.getSize();
-    this.x += this.vx * d;
-    this.y += this.vy * d;
 
-    const margin = 22;
-    if (this.x < margin) {
-      this.x = margin;
-      this.vx = Math.abs(this.vx);
-    } else if (this.x > width - this.width - margin) {
-      this.x = width - this.width - margin;
-      this.vx = -Math.abs(this.vx);
-    }
-    if (this.y < margin) {
-      this.y = margin;
-      this.vy = Math.abs(this.vy);
-    } else if (this.y > height - this.height - margin) {
-      this.y = height - this.height - margin;
-      this.vy = -Math.abs(this.vy);
-    }
+    const frameFactor = deltaTime / 30;
+    const { width, height } = this.game.canvasAdapter.getSize();
+    const margin = GAME_CONFIG.mechanics.ai.escape.margin;
+
+    const rx = this.#updateAxis({ velocity: this.velocityX, coordinate: this.x, dimensionName: 'width', dimension: width, frameFactor, margin });
+    const ry = this.#updateAxis({ velocity: this.velocityY, coordinate: this.y, dimensionName: 'height', dimension: height, frameFactor, margin });
+
+    this.x = rx.updatedCoordinate;
+    this.y = ry.updatedCoordinate;
+    this.velocityX = rx.updatedVelocity;
+    this.velocityY = ry.updatedVelocity;
   }
 
-  /**
-   * Aplicar efecto a todo el equipo de la entidad que lo recoge
-   * (incluidas las trampas). El efecto de tiempo es global al match.
-   */
   applyTo(enemy) {
     this.applyToTeam(enemy.team);
   }
 
-  /**
-   * Aplicar efecto a un equipo por nombre (usado también desde el puntero).
-   */
   applyToTeam(team) {
     this.#applyEffectToTeam(team);
     this.#consume();
   }
 
-  /**
-   * Aplicar el efecto a todos los equipos excepto el indicado.
-   */
   applyToOthers(team) {
     const others = new Set(
       this.game.enemies.filter(e => !e.dead && e.team !== team).map(e => e.team)
@@ -101,10 +91,6 @@ export class PowerUp {
     this.#consume();
   }
 
-  /**
-   * Efecto de un click del jugador: los positivos van a su equipo,
-   * los negativos (trampas) van a todos los demás equipos.
-   */
   applyForClick(team) {
     if (POWERUP_TYPES[this.type].trap) {
       this.applyToOthers(team);
@@ -117,31 +103,23 @@ export class PowerUp {
     const config = POWERUP_TYPES[this.type];
     const game = this.game;
 
-    if (this.type === "time") {
-      game.timeLeft += config.amount;
-      return;
-    }
-
-    if (this.type === "gold") {
-      game.progressManager.awardCredits(5 + Math.floor(Math.random() * 21));
+    const global = GLOBAL_EFFECT_HANDLERS[this.type];
+    if (global) {
+      global(this, team, config);
       return;
     }
 
     const targets = game.enemies.filter(e => !e.dead && e.team === team);
+    const handler = TARGET_EFFECT_HANDLERS[this.type];
+    const duration =
+      team === game.progressManager.selectedTeam
+        ? config.duration * game.progressManager.getPowerupDurationMultiplier()
+        : config.duration;
     for (const target of targets) {
-      switch (this.type) {
-        case "heal":
-          target.life = target.maxLife;
-          break;
-        case "zap":
-          target.life = Math.max(1, Math.floor(target.life * config.amount));
-          break;
-        default:
-          const duration =
-            team === game.progressManager.selectedTeam
-              ? config.duration * game.progressManager.getPowerupDurationMultiplier()
-              : config.duration;
-          target.applyBuff(this.type, duration, config.amount);
+      if (handler) {
+        handler(target, config);
+      } else {
+        target.applyBuff(this.type, duration, config.amount);
       }
     }
   }
@@ -150,7 +128,7 @@ export class PowerUp {
     this.dead = true;
     const config = POWERUP_TYPES[this.type];
     this.game.particles.powerUpBurst(this.x + this.width / 2, this.y + this.height / 2, config.color);
-    this.game.particles.floatText(
+    this.game.particles.showFloatingText(
       this.x + this.width / 2,
       this.y + this.height / 2,
       config.label,
@@ -161,24 +139,24 @@ export class PowerUp {
   draw() {
     this.pulse += 0.1;
     const scale = 1 + Math.sin(this.pulse) * 0.12;
-    const cx = this.x + this.width / 2;
-    const cy = this.y + this.height / 2;
+    const centerX = this.x + this.width / 2;
+    const centerY = this.y + this.height / 2;
 
-    this.ctx.save();
-    this.ctx.globalAlpha = 0.25;
-    this.ctx.fillStyle = this.color;
-    this.ctx.beginPath();
-    this.ctx.arc(cx, cy, this.width / 2 * scale, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.restore();
+    this.context.save();
+    this.context.globalAlpha = 0.25;
+    this.context.fillStyle = this.color;
+    this.context.beginPath();
+    this.context.arc(centerX, centerY, this.width / 2 * scale, 0, Math.PI * 2);
+    this.context.fill();
+    this.context.restore();
 
-    this.ctx.save();
-    this.ctx.translate(cx, cy);
-    this.ctx.scale(scale, scale);
-    this.ctx.font = "16px Arial";
-    this.ctx.textAlign = "center";
-    this.ctx.textBaseline = "middle";
-    this.ctx.fillText(this.emoji, 0, 1);
-    this.ctx.restore();
+    this.context.save();
+    this.context.translate(centerX, centerY);
+    this.context.scale(scale, scale);
+    this.context.font = "16px Arial";
+    this.context.textAlign = "center";
+    this.context.textBaseline = "middle";
+    this.context.fillText(this.emoji, 0, 1);
+    this.context.restore();
   }
 }

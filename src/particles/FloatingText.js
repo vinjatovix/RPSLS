@@ -1,11 +1,6 @@
-/**
- * FloatingText - Texto que asciende y se desvanece.
- * Se usa al recoger un powerup para mostrar su nombre.
- */
-
 export class FloatingText {
-  constructor({ ctx, x, y, text, color }) {
-    this.ctx = ctx;
+  constructor({ context, x, y, text, color }) {
+    this.context = context;
     this.x = x;
     this.y = y;
     this.text = text;
@@ -25,16 +20,16 @@ export class FloatingText {
   draw() {
     const progress = 1 - this.life / this.maxLife;
     const alpha = 1 - progress * progress;
-    this.ctx.save();
-    this.ctx.globalAlpha = alpha;
-    this.ctx.font = "bold 14px Arial";
-    this.ctx.textAlign = "center";
-    this.ctx.textBaseline = "middle";
-    this.ctx.strokeStyle = "rgba(0,0,0,0.7)";
-    this.ctx.lineWidth = 3;
-    this.ctx.strokeText(this.text, this.x, this.y - progress * 30);
-    this.ctx.fillStyle = this.color;
-    this.ctx.fillText(this.text, this.x, this.y - progress * 30);
-    this.ctx.restore();
+    this.context.save();
+    this.context.globalAlpha = alpha;
+    this.context.font = "bold 14px Arial";
+    this.context.textAlign = "center";
+    this.context.textBaseline = "middle";
+    this.context.strokeStyle = "rgba(0,0,0,0.7)";
+    this.context.lineWidth = 3;
+    this.context.strokeText(this.text, this.x, this.y - progress * 30);
+    this.context.fillStyle = this.color;
+    this.context.fillText(this.text, this.x, this.y - progress * 30);
+    this.context.restore();
   }
 }

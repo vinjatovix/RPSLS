@@ -1,8 +1,3 @@
-/**
- * Razas - Subclases de Enemy
- * Cada una fija su equipo (las stats se leen de RACE_STATS en config)
- */
-
 import { Enemy } from "./Enemy.js";
 
 export class Rock extends Enemy {
@@ -26,12 +21,12 @@ export class Scissors extends Enemy {
   }
 
   drawEmoji() {
-    this.ctx.save();
-    this.ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
-    this.ctx.rotate(this.angle - Math.PI / 2);
-    this.ctx.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
-    this.ctx.fillText(this.emoji, this.x - 2, this.y + 16);
-    this.ctx.restore();
+    this.context.save();
+    this.context.translate(this.x + this.width / 2, this.y + this.height / 2);
+    this.context.rotate(this.angle - Math.PI / 2);
+    this.context.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
+    this.context.fillText(this.emoji, this.x - 2, this.y + 16);
+    this.context.restore();
   }
 }
 
@@ -42,12 +37,12 @@ export class Lizard extends Enemy {
   }
 
   drawEmoji() {
-    this.ctx.save();
-    this.ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
-    this.ctx.rotate(this.angle + Math.PI / 1.5);
-    this.ctx.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
-    this.ctx.fillText(this.emoji, this.x - 2, this.y + 16);
-    this.ctx.restore();
+    this.context.save();
+    this.context.translate(this.x + this.width / 2, this.y + this.height / 2);
+    this.context.rotate(this.angle + Math.PI / 1.5);
+    this.context.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
+    this.context.fillText(this.emoji, this.x - 2, this.y + 16);
+    this.context.restore();
   }
 }
 
@@ -58,9 +53,6 @@ export class Spock extends Enemy {
   }
 }
 
-/**
- * Registro de clases de raza por nombre de equipo
- */
 export const RACE_CLASSES = {
   rocks: Rock,
   papers: Paper,
@@ -69,7 +61,4 @@ export const RACE_CLASSES = {
   spocks: Spock
 };
 
-/**
- * Lista de todas las clases de raza (para spawnear una de cada)
- */
 export const ALL_RACES = [Rock, Paper, Scissors, Lizard, Spock];

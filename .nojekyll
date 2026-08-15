@@ -1,0 +1,2 @@
+# GitHub Pages no usa Jekyll; sin esto los ficheros bajo _ o con prefijo
+# podrían no servirse. Fuerza renderizado estático puro.

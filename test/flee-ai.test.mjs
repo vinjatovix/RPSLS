@@ -1,11 +1,12 @@
 /**
- * flee-ai.mjs - Verifica la dirección de huida con conciencia del espacio.
- * Escenarios deterministas (posiciones/ángulos explícitos) con el patrón
- * fake-game de matchupSim: la presa no tiene presas que cazar, así que
- * #setTarget dispara #flee contra el predador.
- *
- *   node test/flee-ai.mjs
+ * flee-ai.test.mjs - Verifies the flee direction is space-aware.
+ * Deterministic scenarios (explicit positions/angles) using the same
+ * fake-game pattern as matchupSim: the prey has no prey to hunt, so
+ * #setTarget triggers #flee against the predator.
  */
+
+import { test } from "node:test";
+import assert from "node:assert/strict";
 
 import {
   pickEscapePoint,
@@ -14,32 +15,19 @@ import {
 } from "../src/canvas/geometry/EscapeSolver.js";
 import { RACE_CLASSES } from "../src/entities/races.js";
 
-let passed = 0;
-let failed = 0;
-
-function assert(cond, label) {
-  if (cond) {
-    passed += 1;
-    console.log(`  ok - ${label}`);
-  } else {
-    failed += 1;
-    console.error(`  FAIL - ${label}`);
-  }
-}
-
 const ARENA = { width: 640, height: 384 };
 const MARGIN = 30;
 
 /**
- * Fake game mínimo que satisface lo que Enemy usa en update().
- * Igual patrón que src/testing/matchupSim.js.
+ * Minimal fake game that satisfies what Enemy uses in update().
+ * Same pattern as src/testing/matchupSim.js.
  */
 function makeFakeGame(arena) {
   const scale = arena.width / 5120;
   return {
-    canvasManager: {
+    canvasAdapter: {
       getScale: () => scale,
-      getCtx: () => null,
+      getContext: () => null,
       getWidth: () => arena.width,
       getHeight: () => arena.height,
       getSize: () => ({ width: arena.width, height: arena.height }),
@@ -83,41 +71,36 @@ function inBounds(aim) {
   );
 }
 
-console.log("Escenario 1 - campo abierto: predador a la derecha, presa al centro");
-{
+test("Scenario 1 - open field: predator to the right, prey at center", () => {
   const aim = fleeAim("scissors", "rocks", { x: 320, y: 192 }, { x: 520, y: 192 });
-  assert(aim.aimX < 320, `huye hacia la izquierda (aimX=${aim.aimX})`);
-  assert(inBounds(aim), `aim in-bounds (${aim.aimX}, ${aim.aimY})`);
-}
+  assert.ok(aim.aimX < 320, `flees to the left (aimX=${aim.aimX})`);
+  assert.ok(inBounds(aim), `aim in-bounds (${aim.aimX}, ${aim.aimY})`);
+});
 
-console.log("Escenario 2 - pegado al muro derecho con predador a la izquierda");
-{
+test("Scenario 2 - against the right wall with predator to the left", () => {
   const aim = fleeAim("scissors", "rocks", { x: 580, y: 192 }, { x: 520, y: 192 });
-  assert(Math.abs(aim.aimY - 192) > 100, `escapa en vertical, no contra la pared (aimY=${aim.aimY})`);
-  assert(inBounds(aim), `aim in-bounds (${aim.aimX}, ${aim.aimY})`);
-}
+  assert.ok(Math.abs(aim.aimY - 192) > 100, `escapes vertically, not into the wall (aimY=${aim.aimY})`);
+  assert.ok(inBounds(aim), `aim in-bounds (${aim.aimX}, ${aim.aimY})`);
+});
 
-console.log("Escenario 3 - en la esquina inferior-izquierda con predador dentro");
-{
+test("Scenario 3 - in the bottom-left corner with predator inside", () => {
   const aim = fleeAim("scissors", "rocks", { x: 40, y: 344 }, { x: 120, y: 264 });
   const cornerDist = Math.hypot(aim.aimX, ARENA.height - aim.aimY);
-  assert(cornerDist > 100, `se aleja de la esquina, no se encajona (dist=${cornerDist.toFixed(0)})`);
-  assert(inBounds(aim), `aim in-bounds (${aim.aimX}, ${aim.aimY})`);
-}
+  assert.ok(cornerDist > 100, `moves away from the corner, does not box itself in (dist=${cornerDist.toFixed(0)})`);
+  assert.ok(inBounds(aim), `aim in-bounds (${aim.aimX}, ${aim.aimY})`);
+});
 
-console.log("Escenario 4 - threat detrás con espacio abierto al frente");
-{
+test("Scenario 4 - threat behind with open space ahead", () => {
   const aim = fleeAim("scissors", "rocks", { x: 320, y: 192 }, { x: 120, y: 192 });
-  assert(aim.aimX > 320, `huye hacia el espacio abierto (aimX=${aim.aimX})`);
-  assert(inBounds(aim), `aim in-bounds (${aim.aimX}, ${aim.aimY})`);
-}
+  assert.ok(aim.aimX > 320, `flees toward the open space (aimX=${aim.aimX})`);
+  assert.ok(inBounds(aim), `aim in-bounds (${aim.aimX}, ${aim.aimY})`);
+});
 
-console.log("Escenario 5 - solver: sesgo por clearance (recto = esquina, tangencial = abierto)");
-{
+test("Scenario 5 - solver: clearance bias (straight = corner, tangential = open)", () => {
   const pos = { x: 40, y: 344 };
   const threat = { x: 120, y: 264 };
-  const cfg = { margin: MARGIN, radius: 300 };
-  const aim = pickEscapePoint(pos, threat, ARENA, cfg);
+  const config = { margin: MARGIN, radius: 300 };
+  const aim = pickEscapePoint(pos, threat, ARENA, config);
   const straight = 135 * Math.PI / 180;
   const straightClear = clearanceToBoundary(
     pos.x, pos.y, Math.cos(straight), Math.sin(straight), ARENA.width, ARENA.height
@@ -128,16 +111,13 @@ console.log("Escenario 5 - solver: sesgo por clearance (recto = esquina, tangenc
   const aimClear = clearanceToBoundary(
     pos.x, pos.y, aimDirX / aimDist, aimDirY / aimDist, ARENA.width, ARENA.height
   );
-  assert(
+  assert.ok(
     straightClear < CLEARANCE_SATURATE && aimClear > straightClear,
-    `clearance del aim (${aimClear.toFixed(0)}) > clearance recto a la esquina (${straightClear.toFixed(0)})`
+    `aim clearance (${aimClear.toFixed(0)}) > straight clearance to the corner (${straightClear.toFixed(0)})`
   );
-  assert(
+  assert.ok(
     aim.x >= MARGIN && aim.x <= ARENA.width - MARGIN &&
     aim.y >= MARGIN && aim.y <= ARENA.height - MARGIN,
     `aim in-bounds (${aim.x}, ${aim.y})`
   );
-}
-
-console.log(`\n${passed} ok, ${failed} fallos`);
-process.exit(failed ? 1 : 0);
+});

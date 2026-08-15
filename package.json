@@ -1,0 +1,24 @@
+{
+  "name": "idle-rps",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Idle RPS - rock, paper, scissors, lizard, spock idle game",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "coverage": "node --test --experimental-test-coverage test/*.test.mjs",
+    "check": "node scripts/check.mjs",
+    "balance": "node test/headless-campaign.mjs",
+    "sweep": "node test/headless-campaign.mjs sweep 2 100 15",
+    "focus": "node test/headless-campaign.mjs focus",
+    "matchup": "node test/headless-campaign.mjs matchup 12",
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/serve.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

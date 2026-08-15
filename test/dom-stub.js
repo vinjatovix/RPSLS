@@ -1,6 +1,6 @@
 /**
- * dom-stub.js - Stub de navegador para ejecutar el Game headless (Node).
- * Solo para el harness de simulación (test/headless-campaign.mjs).
+ * dom-stub.js - Browser stub to run the Game headless (Node).
+ * Only for the simulation harness (test/headless-campaign.mjs).
  */
 
 const store = new Map();
@@ -26,7 +26,7 @@ const fakeStorage = {
   }
 };
 
-const fakeCtx = new Proxy(
+const fakeContext = new Proxy(
   {},
   {
     get(target, prop) {
@@ -70,7 +70,7 @@ function fakeElement() {
       return [];
     },
     getContext() {
-      return fakeCtx;
+      return fakeContext;
     },
     getBoundingClientRect() {
       return { width: 640, height: 384, left: 0, top: 0 };
@@ -78,23 +78,23 @@ function fakeElement() {
     focus() {},
     blur() {},
     click() {},
-    set innerHTML(v) {},
+    set innerHTML(value) {},
     get innerHTML() {
       return "";
     },
-    set textContent(v) {},
+    set textContent(value) {},
     get textContent() {
       return "";
     },
-    set value(v) {},
+    set value(value) {},
     get value() {
       return "";
     },
-    set checked(v) {},
+    set checked(value) {},
     get checked() {
       return false;
     },
-    set disabled(v) {},
+    set disabled(value) {},
     get disabled() {
       return false;
     }

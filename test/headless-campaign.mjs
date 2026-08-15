@@ -1,8 +1,8 @@
 /**
- * headless-campaign.mjs - Ejecuta el sim de balance SIN navegador.
- * Reusa runCampaign de balanceRunner.js (Game real en fast-forward).
+ * headless-campaign.mjs - Runs the balance sim WITHOUT a browser.
+ * Reuses runCampaign from balanceRunner.js (real Game in fast-forward).
  *
- * Uso:
+ * Usage:
  *   node test/headless-campaign.mjs campaign [runs=10] [levels=100]
  *   node test/headless-campaign.mjs sweep     [runs=2]  [levels=100] [pct=15]
  *   node test/headless-campaign.mjs matchup   [seeds=12]
@@ -39,24 +39,24 @@ function writePath(obj, path, value) {
   target[last] = value;
 }
 
-function labelOf(cfg) {
-  if (cfg.timer === "base") return `timer.base ${cfg.dir > 0 ? "+" : ""}${cfg.dir * cfg.pct}%`;
-  if (cfg.timer === "growth") return `timer.growth ${cfg.dir > 0 ? "+" : ""}${cfg.dir * cfg.pct}%`;
-  if (cfg.ai === "dangerRadius") return `ai.dangerRadius ${cfg.dir > 0 ? "+" : ""}${cfg.dir * cfg.pct}%`;
-  return `${cfg.team}.${cfg.name} ${cfg.dir > 0 ? "+" : ""}${cfg.dir * cfg.pct}%`;
+function labelOf(config) {
+  if (config.timer === "base") return `timer.base ${config.direction > 0 ? "+" : ""}${config.direction * config.percent}%`;
+  if (config.timer === "growth") return `timer.growth ${config.direction > 0 ? "+" : ""}${config.direction * config.percent}%`;
+  if (config.ai === "dangerRadius") return `ai.dangerRadius ${config.direction > 0 ? "+" : ""}${config.direction * config.percent}%`;
+  return `${config.team}.${config.name} ${config.direction > 0 ? "+" : ""}${config.direction * config.percent}%`;
 }
 
-async function runShort(runs, levels, dt) {
+async function runShort(runs, levels, deltaTime) {
   const results = [];
   for (let i = 0; i < runs; i++) {
-    results.push(await runCampaign({ maxLevel: levels, dt }));
+    results.push(await runCampaign({ maxLevel: levels, deltaTime }));
   }
   return results.length ? aggregateRuns(results) : null;
 }
 
-function winRates(agg) {
+function winRates(aggregate) {
   const out = {};
-  if (agg) for (const team of TEAMS) out[team] = agg.teams[team].winRate;
+  if (aggregate) for (const team of TEAMS) out[team] = aggregate.teams[team].winRate;
   return out;
 }
 
@@ -65,37 +65,37 @@ function statPathOf(name) {
   return hit ? hit[1] : name;
 }
 
-async function runFocus(paths, runs, levels, dt, pct) {
+async function runFocus(paths, runs, levels, deltaTime, percent) {
   process.stdout.write(`[focus] baseline ${runs}x${levels}...\n`);
-  const t0 = Date.now();
-  const base = winRates(await runShort(runs, levels, dt));
+  const startTime = Date.now();
+  const base = winRates(await runShort(runs, levels, deltaTime));
 
   const configs = [];
-  for (const p of paths) {
-    const [team, ...rest] = p.split(".");
-    const path = statPathOf(rest.join("."));
-    for (const dir of [-1, 1]) configs.push({ team, name: rest.join("."), path, dir, pct });
+  for (const path of paths) {
+    const [team, ...rest] = path.split(".");
+    const statPath = statPathOf(rest.join("."));
+    for (const direction of [-1, 1]) configs.push({ team, name: rest.join("."), path: statPath, direction, percent });
   }
 
   const rows = [];
   for (let ci = 0; ci < configs.length; ci++) {
-    const cfg = configs[ci];
+    const config = configs[ci];
     process.stdout.write(
-      `[focus] ${ci + 1}/${configs.length} ${labelOf(cfg)} (${((Date.now() - t0) / 1000).toFixed(0)}s)\n`
+      `[focus] ${ci + 1}/${configs.length} ${labelOf(config)} (${((Date.now() - startTime) / 1000).toFixed(0)}s)\n`
     );
-    const cur = readPath(RACE_STATS[cfg.team], cfg.path);
-    writePath(RACE_STATS[cfg.team], cfg.path, Math.max(Math.abs(cur) * 0.01, cur * (1 + (cfg.dir * pct) / 100)));
-    const rates = winRates(await runShort(runs, levels, dt));
-    writePath(RACE_STATS[cfg.team], cfg.path, cur);
-    rows.push({ cfg, rates, base });
+    const current = readPath(RACE_STATS[config.team], config.path);
+    writePath(RACE_STATS[config.team], config.path, Math.max(Math.abs(current) * 0.01, current * (1 + (config.direction * percent) / 100)));
+    const rates = winRates(await runShort(runs, levels, deltaTime));
+    writePath(RACE_STATS[config.team], config.path, current);
+    rows.push({ config, rates, base });
   }
-  return { base, rows, pct };
+  return { base, rows, percent };
 }
 
-async function runSweep(runs, levels, dt, pct) {
+async function runSweep(runs, levels, deltaTime, percent) {
   process.stdout.write(`[sweep] baseline ${runs}x${levels}...\n`);
-  const t0 = Date.now();
-  const base = winRates(await runShort(runs, levels, dt));
+  const startTime = Date.now();
+  const base = winRates(await runShort(runs, levels, deltaTime));
 
   const baseline = {};
   for (const team of TEAMS)
@@ -108,84 +108,84 @@ async function runSweep(runs, levels, dt, pct) {
   const configs = [];
   for (const team of TEAMS)
     for (const [name, path] of SWEEP_STAT_PATHS)
-      for (const dir of [-1, 1]) configs.push({ team, name, path, dir, pct });
-  for (const timer of ["base", "growth"]) for (const dir of [-1, 1]) configs.push({ timer, dir, pct });
-  for (const dir of [-1, 1]) configs.push({ ai: "dangerRadius", dir, pct });
+      for (const direction of [-1, 1]) configs.push({ team, name, path, direction, percent });
+  for (const timer of ["base", "growth"]) for (const direction of [-1, 1]) configs.push({ timer, direction, percent });
+  for (const direction of [-1, 1]) configs.push({ ai: "dangerRadius", direction, percent });
 
   const rows = [];
   for (let ci = 0; ci < configs.length; ci++) {
-    const cfg = configs[ci];
+    const config = configs[ci];
     process.stdout.write(
-      `[sweep] ${ci + 1}/${configs.length} ${labelOf(cfg)} (${((Date.now() - t0) / 1000).toFixed(0)}s)\n`
+      `[sweep] ${ci + 1}/${configs.length} ${labelOf(config)} (${((Date.now() - startTime) / 1000).toFixed(0)}s)\n`
     );
-    if (cfg.timer === "base") {
-      GAME_CONFIG.mechanics.matchTimeBaseMs = Math.max(1000, timerBase * (1 + (cfg.dir * pct) / 100));
-    } else if (cfg.timer === "growth") {
-      GAME_CONFIG.mechanics.matchTimeGrowthMs = Math.max(0, timerGrowth * (1 + (cfg.dir * pct) / 100));
-    } else if (cfg.ai === "dangerRadius") {
-      GAME_CONFIG.mechanics.ai.dangerRadius = Math.max(20, dangerBase * (1 + (cfg.dir * pct) / 100));
+    if (config.timer === "base") {
+      GAME_CONFIG.mechanics.matchTimeBaseMs = Math.max(1000, timerBase * (1 + (config.direction * percent) / 100));
+    } else if (config.timer === "growth") {
+      GAME_CONFIG.mechanics.matchTimeGrowthMs = Math.max(0, timerGrowth * (1 + (config.direction * percent) / 100));
+    } else if (config.ai === "dangerRadius") {
+      GAME_CONFIG.mechanics.ai.dangerRadius = Math.max(20, dangerBase * (1 + (config.direction * percent) / 100));
     } else {
-      const cur = readPath(RACE_STATS[cfg.team], cfg.path);
-      writePath(RACE_STATS[cfg.team], cfg.path, Math.max(Math.abs(cur) * 0.01, cur * (1 + (cfg.dir * pct) / 100)));
+      const current = readPath(RACE_STATS[config.team], config.path);
+      writePath(RACE_STATS[config.team], config.path, Math.max(Math.abs(current) * 0.01, current * (1 + (config.direction * percent) / 100)));
     }
 
-    const rates = winRates(await runShort(runs, levels, dt));
+    const rates = winRates(await runShort(runs, levels, deltaTime));
 
-    if (cfg.timer === "base") GAME_CONFIG.mechanics.matchTimeBaseMs = timerBase;
-    else if (cfg.timer === "growth") GAME_CONFIG.mechanics.matchTimeGrowthMs = timerGrowth;
-    else if (cfg.ai === "dangerRadius") GAME_CONFIG.mechanics.ai.dangerRadius = dangerBase;
-    else writePath(RACE_STATS[cfg.team], cfg.path, baseline[`${cfg.team}.${cfg.path}`]);
+    if (config.timer === "base") GAME_CONFIG.mechanics.matchTimeBaseMs = timerBase;
+    else if (config.timer === "growth") GAME_CONFIG.mechanics.matchTimeGrowthMs = timerGrowth;
+    else if (config.ai === "dangerRadius") GAME_CONFIG.mechanics.ai.dangerRadius = dangerBase;
+    else writePath(RACE_STATS[config.team], config.path, baseline[`${config.team}.${config.path}`]);
 
-    rows.push({ cfg, rates, base });
+    rows.push({ config, rates, base });
   }
-  return { base, rows, pct };
+  return { base, rows, percent };
 }
 
 function formatSweepReport(sweep) {
-  const L = [];
+  const lines = [];
   const baseStr = Object.entries(sweep.base)
-    .map(([t, v]) => `${t} ${v.toFixed(1)}%`)
+    .map(([team, value]) => `${team} ${value.toFixed(1)}%`)
     .join(", ");
-  L.push(`Barrido de sensibilidad ±${sweep.pct}% (baseline: ${baseStr})`);
-  L.push("Celdas: delta en puntos porcentuales respecto al baseline");
-  L.push("");
-  const rowCells = cells => cells.map((c, i) => (i === 0 ? c.padEnd(24) : String(c).padStart(9))).join(" ");
-  L.push(rowCells(["Perturbacion"].concat(TEAMS)));
-  for (const r of sweep.rows) {
-    const cells = [labelOf(r.cfg)];
+  lines.push(`Sensitivity sweep ±${sweep.percent}% (baseline: ${baseStr})`);
+  lines.push("Cells: delta in percentage points vs baseline");
+  lines.push("");
+  const formatRow = cells => cells.map((c, i) => (i === 0 ? c.padEnd(24) : String(c).padStart(9))).join(" ");
+  lines.push(formatRow(["Perturbation"].concat(TEAMS)));
+  for (const row of sweep.rows) {
+    const cells = [labelOf(row.config)];
     for (const team of TEAMS) {
-      const d = (r.rates[team] ?? 0) - (r.base[team] ?? 0);
+      const d = (row.rates[team] ?? 0) - (row.base[team] ?? 0);
       cells.push((d >= 0 ? "+" : "") + d.toFixed(1));
     }
-    L.push(rowCells(cells));
+    lines.push(formatRow(cells));
   }
-  L.push("");
-  L.push("Mejores palancas por equipo:");
+  lines.push("");
+  lines.push("Best levers per team:");
   for (const team of TEAMS) {
     let best = null;
     let worst = null;
-    let bd = -Infinity;
-    let wd = Infinity;
-    for (const r of sweep.rows) {
-      if (!r.cfg.team) continue;
-      const d = (r.rates[team] ?? 0) - (r.base[team] ?? 0);
-      if (d > bd) {
-        bd = d;
-        best = r.cfg;
+    let bestDelta = -Infinity;
+    let worstDelta = Infinity;
+    for (const row of sweep.rows) {
+      if (!row.config.team) continue;
+      const d = (row.rates[team] ?? 0) - (row.base[team] ?? 0);
+      if (d > bestDelta) {
+        bestDelta = d;
+        best = row.config;
       }
-      if (d < wd) {
-        wd = d;
-        worst = r.cfg;
+      if (d < worstDelta) {
+        worstDelta = d;
+        worst = row.config;
       }
     }
-    L.push(
-      `  ${team.padEnd(10)} subir: ${best ? labelOf(best) : "-"} (+${bd.toFixed(1)}pp)   ` +
-        `bajar: ${worst ? labelOf(worst) : "-"} (${wd.toFixed(1)}pp)`
+    lines.push(
+      `  ${team.padEnd(10)} raise: ${best ? labelOf(best) : "-"} (+${bestDelta.toFixed(1)}pp)   ` +
+        `lower: ${worst ? labelOf(worst) : "-"} (${worstDelta.toFixed(1)}pp)`
     );
   }
-  L.push("");
-  L.push("Nota: el barrido restaura la config al final. Perturba un stat cada vez.");
-  return L.join("\n");
+  lines.push("");
+  lines.push("Note: the sweep restores the config at the end. Perturbs one stat at a time.");
+  return lines.join("\n");
 }
 
 const [, , mode, ...args] = process.argv;
@@ -193,33 +193,33 @@ const [, , mode, ...args] = process.argv;
 if (mode === "sweep") {
   const runs = +args[0] || 2;
   const levels = +args[1] || 100;
-  const pct = +args[2] || 15;
-  const t0 = Date.now();
-  const sweep = await runSweep(runs, levels, 16, pct);
-  const secs = ((Date.now() - t0) / 1000).toFixed(1);
+  const percent = +args[2] || 15;
+  const startTime = Date.now();
+  const sweep = await runSweep(runs, levels, 16, percent);
+  const seconds = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log(formatSweepReport(sweep));
-  console.log(`\n[${secs}s]`);
+  console.log(`\n[${seconds}s]`);
 } else if (mode === "focus") {
   const runs = +args[0] || 10;
   const levels = +args[1] || 100;
-  const pct = +args[2] || 15;
+  const percent = +args[2] || 15;
   const paths = args.slice(3).join(",").split(",").filter(Boolean);
-  const t0 = Date.now();
-  const sweep = await runFocus(paths, runs, levels, 16, pct);
-  const secs = ((Date.now() - t0) / 1000).toFixed(1);
+  const startTime = Date.now();
+  const sweep = await runFocus(paths, runs, levels, 16, percent);
+  const seconds = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log(formatSweepReport(sweep));
-  console.log(`\n[${secs}s]`);
+  console.log(`\n[${seconds}s]`);
 } else if (mode === "matchup") {
   const seeds = +args[0] || 12;
-  const res = runMatchupSim({ seeds });
-  console.log(formatMatchupReport(res));
+  const result = runMatchupSim({ seeds });
+  console.log(formatMatchupReport(result));
 } else {
   const runs = +args[0] || 10;
   const levels = +args[1] || 100;
-  const t0 = Date.now();
+  const startTime = Date.now();
   const results = [];
-  for (let i = 0; i < runs; i++) results.push(await runCampaign({ maxLevel: levels, dt: 16 }));
-  const agg = aggregateRuns(results);
-  console.log(formatReport(agg, { thresholdPp: 5 }));
-  console.log(`\n[${((Date.now() - t0) / 1000).toFixed(1)}s]`);
+  for (let i = 0; i < runs; i++) results.push(await runCampaign({ maxLevel: levels, deltaTime: 16 }));
+  const aggregate = aggregateRuns(results);
+  console.log(formatReport(aggregate, { thresholdPp: 5 }));
+  console.log(`\n[${((Date.now() - startTime) / 1000).toFixed(1)}s]`);
 }

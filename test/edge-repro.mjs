@@ -1,32 +1,32 @@
 /**
- * edge-repro.mjs - Repro del bug de outDies en presas que huyen.
- * Una presa (papers) en el borde izquierdo huye de su predador (scissors),
- * apuntando hacia fuera con velocidad máxima. Antes el clamp la salvaba;
- * ahora debe morir por outDies al cruzar la frontera.
+ * edge-repro.mjs - Reproduction of the outDies bug on fleeing prey.
+ * A prey (papers) at the left edge flees from its predator (scissors),
+ * aiming outward at max speed. Before, the clamp saved it; now it must
+ * die from outDies when crossing the boundary.
  *   node test/edge-repro.mjs
  */
 
 import "./dom-stub.js";
 import { RACE_CLASSES } from "../src/entities/races.js";
 
-const W = 640;
-const H = 384;
-const scale = W / 5120;
+const WIDTH = 640;
+const HEIGHT = 384;
+const scale = WIDTH / 5120;
 
 function makeGame() {
   return {
     gameTime: 0,
-    canvasManager: {
+    canvasAdapter: {
       getScale: () => scale,
-      getCtx: () => null,
-      getWidth: () => W,
-      getHeight: () => H,
-      getSize: () => ({ width: W, height: H }),
-      getCenter: () => ({ x: W / 2, y: H / 2 }),
-      getRandomSpawnPoint: () => ({ x: W / 2, y: H / 2 }),
+      getContext: () => null,
+      getWidth: () => WIDTH,
+      getHeight: () => HEIGHT,
+      getSize: () => ({ width: WIDTH, height: HEIGHT }),
+      getCenter: () => ({ x: WIDTH / 2, y: HEIGHT / 2 }),
+      getRandomSpawnPoint: () => ({ x: WIDTH / 2, y: HEIGHT / 2 }),
       clampPosition: pos => ({
-        x: Math.max(0, Math.min(pos.x, W - pos.width)),
-        y: Math.max(0, Math.min(pos.y, H - pos.height))
+        x: Math.max(0, Math.min(pos.x, WIDTH - pos.width)),
+        y: Math.max(0, Math.min(pos.y, HEIGHT - pos.height))
       })
     },
     options: { mechanics: { limitCanvas: false, outDies: true }, effects: {} },
@@ -35,37 +35,37 @@ function makeGame() {
 }
 
 const scenarios = [
-  { name: "papers escapa de scissors (muro izq)", victim: "papers", pred: "scissors", x: 5, angle: Math.PI },
-  { name: "papers escapa de scissors (muro der)", victim: "papers", pred: "scissors", x: W - 25, angle: 0 }
+  { name: "papers escapes from scissors (left wall)", victim: "papers", pred: "scissors", x: 5, angle: Math.PI },
+  { name: "papers escapes from scissors (right wall)", victim: "papers", pred: "scissors", x: WIDTH - 25, angle: 0 }
 ];
 
-for (const sc of scenarios) {
+for (const scenario of scenarios) {
   const game = makeGame();
-  const victim = new RACE_CLASSES[sc.victim]({ game, x: sc.x, y: H / 2, angle: sc.angle });
-  const predator = new RACE_CLASSES[sc.pred]({ game, x: sc.x < 100 ? 300 : 340, y: H / 2 });
+  const victim = new RACE_CLASSES[scenario.victim]({ game, x: scenario.x, y: HEIGHT / 2, angle: scenario.angle });
+  const predator = new RACE_CLASSES[scenario.pred]({ game, x: scenario.x < 100 ? 300 : 340, y: HEIGHT / 2 });
   victim.speed = victim.maxSpeed;
-  victim.vx = Math.cos(victim.angle) * victim.speed;
-  victim.vy = Math.sin(victim.angle) * victim.speed;
+  victim.velocityX = Math.cos(victim.angle) * victim.speed;
+  victim.velocityY = Math.sin(victim.angle) * victim.speed;
 
   const both = [victim, predator];
   let offScreenFrame = -1;
   let deadFrame = -1;
   let fleeFrames = 0;
   let minX = victim.x;
-  for (let f = 0; f < 3000; f++) {
+  for (let frame = 0; frame < 3000; frame++) {
     victim.update(16, both);
     predator.update(16, both);
     minX = Math.min(minX, victim.x);
     if (victim.fleeing) fleeFrames++;
-    if (victim.offScreen && offScreenFrame < 0) offScreenFrame = f;
+    if (victim.offScreen && offScreenFrame < 0) offScreenFrame = frame;
     if (victim.dead) {
-      deadFrame = f;
+      deadFrame = frame;
       break;
     }
   }
   console.log(
-    `${sc.name}: fleeing=${fleeFrames} frames | minX=${minX.toFixed(1)} | ` +
-      `offScreen@${offScreenFrame >= 0 ? offScreenFrame : "nunca"} | ` +
-      `dead@${deadFrame >= 0 ? deadFrame : "nunca"}${victim.killedBy ? ` killedBy=${victim.killedBy}` : ""}`
+    `${scenario.name}: fleeing=${fleeFrames} frames | minX=${minX.toFixed(1)} | ` +
+      `offScreen@${offScreenFrame >= 0 ? offScreenFrame : "never"} | ` +
+      `dead@${deadFrame >= 0 ? deadFrame : "never"}${victim.killedBy ? ` killedBy=${victim.killedBy}` : ""}`
   );
 }

@@ -1,8 +1,8 @@
 /**
- * check-combo.mjs - Prueba combinaciones de config en un solo proceso.
+ * check-combo.mjs - Tests config combinations in a single process.
  *   node test/check-combo.mjs <runs> <levels> \
  *     '{"team": {"health": {"max": N}, "damage": {"amount": N}, "movement": {...}}}' ...
- * Cada arg JSON es un combo; se aplica sobre el config base, se corre y se restaura.
+ * Each JSON arg is a combo; it is applied to the base config, run, and restored.
  */
 
 import "./dom-stub.js";
@@ -18,14 +18,14 @@ const saved = JSON.parse(JSON.stringify(RACE_STATS));
 
 async function run() {
   const results = [];
-  for (let i = 0; i < runs; i++) results.push(await runCampaign({ maxLevel: levels, dt: 16 }));
+  for (let i = 0; i < runs; i++) results.push(await runCampaign({ maxLevel: levels, deltaTime: 16 }));
   return aggregateRuns(results);
 }
 
 function deepApply(target, patch) {
-  for (const [k, v] of Object.entries(patch)) {
-    if (v && typeof v === "object" && !Array.isArray(v)) deepApply(target[k], v);
-    else target[k] = v;
+  for (const [key, value] of Object.entries(patch)) {
+    if (value && typeof value === "object" && !Array.isArray(value)) deepApply(target[key], value);
+    else target[key] = value;
   }
 }
 
@@ -36,19 +36,19 @@ function restore() {
 console.log(`Combo        rocks  papers scissors lizards  spocks`);
 for (const combo of combos) {
   for (const [team, patch] of Object.entries(combo)) deepApply(RACE_STATS[team], patch);
-  const agg = await run();
+  const aggregate = await run();
   const label = Object.entries(combo)
-    .map(([t, p]) => {
+    .map(([team, patch]) => {
       const bits = [];
-      if (p.health) bits.push(`hp${p.health.max}`);
-      if (p.damage) bits.push(`dmg${p.damage.amount}`);
-      for (const [k, v] of Object.entries(p.movement ?? {})) bits.push(`${k.slice(0, 4)}${v}`);
-      return `${t}[${bits.join(",")}]`;
+      if (patch.health) bits.push(`hp${patch.health.max}`);
+      if (patch.damage) bits.push(`dmg${patch.damage.amount}`);
+      for (const [key, value] of Object.entries(patch.movement ?? {})) bits.push(`${key.slice(0, 4)}${value}`);
+      return `${team}[${bits.join(",")}]`;
     })
     .join(" + ");
   console.log(
     `${label.padEnd(32)} ` +
-      TEAMS.map(t => `${String(agg.teams[t].winRate.toFixed(1)).padStart(5)}%`).join("  ")
+      TEAMS.map(t => `${String(aggregate.teams[t].winRate.toFixed(1)).padStart(5)}%`).join("  ")
   );
   restore();
 }

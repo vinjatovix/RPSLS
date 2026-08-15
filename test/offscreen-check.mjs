@@ -1,5 +1,5 @@
 /**
- * offscreen-check.mjs - Mide muertes off-screen (killedBy null) vs por daño.
+ * offscreen-check.mjs - Measures off-screen deaths (killedBy null) vs by damage.
  *   node test/offscreen-check.mjs [matches=100]
  */
 
@@ -20,27 +20,27 @@ game.powerupTimer = Infinity;
 const allSeen = new Set();
 while (game.match <= matches) {
   game.update(16);
-  for (const e of game.enemies) allSeen.add(e);
+  for (const enemy of game.enemies) allSeen.add(enemy);
 }
 
 const offScreen = {};
 const byDamage = {};
-for (const t of TEAMS) {
-  offScreen[t] = 0;
-  byDamage[t] = 0;
+for (const team of TEAMS) {
+  offScreen[team] = 0;
+  byDamage[team] = 0;
 }
 let total = 0;
-for (const e of allSeen) {
-  if (!e.dead) continue;
+for (const enemy of allSeen) {
+  if (!enemy.dead) continue;
   total++;
-  if (e.killedBy) byDamage[e.team]++;
-  else offScreen[e.team]++;
+  if (enemy.killedBy) byDamage[enemy.team]++;
+  else offScreen[enemy.team]++;
 }
 
-const o = Object.values(offScreen).reduce((a, b) => a + b, 0);
-console.log(`Matches: ${matches} | enemigos vistos: ${allSeen.size} | muertes: ${total}`);
-console.log(`Off-screen por equipo: ${JSON.stringify(offScreen)}`);
-console.log(`Por daño por equipo:   ${JSON.stringify(byDamage)}`);
-console.log(`% off-screen del total: ${((o / Math.max(1, total)) * 100).toFixed(1)}%`);
+const offScreenTotal = Object.values(offScreen).reduce((a, b) => a + b, 0);
+console.log(`Matches: ${matches} | enemies seen: ${allSeen.size} | deaths: ${total}`);
+console.log(`Off-screen per team: ${JSON.stringify(offScreen)}`);
+console.log(`By damage per team:   ${JSON.stringify(byDamage)}`);
+console.log(`% off-screen of total: ${((offScreenTotal / Math.max(1, total)) * 100).toFixed(1)}%`);
 
 game.destroy();
