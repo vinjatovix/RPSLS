@@ -1,11 +1,11 @@
 /**
- * MenuManager - Menú de pausa y wizard de nueva partida
- * Pasos: pausa → elige equipo → elige nivel → jugar
+ * MenuManager - Menú de pausa, wizard de nueva partida y resultado de liga
+ * Pasos: pausa → modo → (longitud | nivel inicial) → equipo → jugar
  * - "Nueva partida" hace un reset total del progreso
  * - Controla la pausa del Game (game.paused) mientras el menú está abierto
  */
 
-import { RACE_STATS } from "../config/gameConfig.js";
+import { GAME_MODES, LEAGUE_LENGTHS, RACE_STATS } from "../config/gameConfig.js";
 
 const LEVEL_MIN = 0;
 const LEVEL_MAX = 2000;
@@ -14,7 +14,7 @@ export class MenuManager {
   /**
    * @param {Object} options
    * @param {() => import("../index.js").Game | null} options.getGame - Devuelve el Game actual
-   * @param {(level: number) => void} options.onStart - Lanza una partida nueva con el nivel dado
+   * @param {(config: {mode: string, leagueLength: number, startLevel: number, team: string}) => void} options.onStart - Lanza una partida nueva
    */
   constructor({ getGame, onStart }) {
     this.getGame = getGame;
@@ -24,6 +24,9 @@ export class MenuManager {
     this.bodyEl = document.getElementById("menu-body");
     this.actionsEl = document.getElementById("menu-actions");
     this.levelInput = null;
+    this.pendingMode = null;
+    this.pendingLeagueLength = null;
+    this.pendingTeam = null;
   }
 
   #game() {
@@ -96,13 +99,16 @@ export class MenuManager {
     const pm = game?.progressManager;
     const team = pm ? `${RACE_STATS[pm.selectedTeam].emoji} ${pm.selectedTeam}` : "—";
 
+    const leagueOver = game?.mode?.isLeague && game.match > game.leagueLength;
+    const canResumeReal = !!canResume && !leagueOver;
+
     const summary = this.#el("div", "menu-summary");
     summary.appendChild(this.#span(`Match: ${game?.match ?? 0}`));
     summary.appendChild(this.#span(`Equipo: ${team}`));
     summary.appendChild(this.#span(`Créditos: ${pm?.credits ?? 0} 💰`));
 
     const buttons = [];
-    if (canResume) {
+    if (canResumeReal) {
       buttons.push({ label: "Continuar", className: "primary", onClick: () => this.close() });
     }
     buttons.push({ label: "Nueva partida", onClick: () => this.#handleNewGame() });
@@ -115,7 +121,149 @@ export class MenuManager {
     if (game?.progressManager) {
       game.progressManager.reset();
     }
-    this.#showTeam();
+    this.#showMode();
+  }
+
+  /**
+   * Paso 1: elegir modo de juego
+   */
+  #showMode() {
+    this.pendingMode = null;
+    const grid = this.#el("div", "mode-pick-grid");
+    const desc = this.#el("div", "team-details");
+
+    for (const [key, cfg] of Object.entries(GAME_MODES)) {
+      const btn = this.#el("button", "team-btn");
+      btn.type = "button";
+      btn.dataset.mode = key;
+      btn.innerHTML = `<span class="team-emoji">${cfg.capture ? "🫳" : "☠️"}</span>${cfg.label}`;
+      btn.addEventListener("click", () => {
+        this.pendingMode = key;
+        grid.querySelectorAll(".team-btn").forEach(b => b.classList.toggle("selected", b === btn));
+        this.#renderModeInfo(desc, cfg);
+        if (this.siguienteBtn) this.siguienteBtn.disabled = false;
+      });
+      grid.appendChild(btn);
+    }
+
+    const body = this.#el("div", "mode-pick-body");
+    body.appendChild(grid);
+    body.appendChild(desc);
+    this.#renderModeInfo(desc, GAME_MODES["infinito-muerte"]);
+
+    this.#render("🎮 Modo de juego", body, [
+      {
+        label: "Siguiente",
+        className: "primary js-siguiente",
+        disabled: true,
+        onClick: () => {
+          const cfg = GAME_MODES[this.pendingMode];
+          if (!cfg) return;
+          if (cfg.kind === "league") {
+            this.#showLeagueLength();
+          } else if (cfg.kind === "level") {
+            this.#showLevel();
+          } else {
+            this.#showTeam();
+          }
+        }
+      }
+    ]);
+
+    this.siguienteBtn = this.actionsEl.querySelector(".js-siguiente");
+  }
+
+  #renderModeInfo(container, cfg) {
+    container.innerHTML = `
+      <div class="team-details-head">
+        <span class="team-emoji">${cfg.capture ? "🫳" : "☠️"}</span>
+        <strong>${cfg.label}</strong>
+      </div>
+      <div class="team-details-row">
+        <span class="team-details-label">Sistema:</span>
+        <span>${cfg.capture ? "Captura — los derrotados se unen al vencedor" : "Muerte — los derrotados se eliminan"}</span>
+      </div>
+      <div class="team-details-row">
+        <span class="team-details-label">Duración:</span>
+        <span>${
+          cfg.isLeague
+            ? "liga con un número fijo de matches"
+            : cfg.kind === "level"
+              ? "nivel inicial elegible (0–" + LEVEL_MAX + ")"
+              : "sin límite"
+        }</span>
+      </div>`;
+  }
+
+  /**
+   * Paso 2 (solo ligas): elegir longitud
+   */
+  #showLeagueLength() {
+    this.pendingLeagueLength = null;
+    const grid = this.#el("div", "league-pick-grid");
+    const hint = this.#el("div", "menu-hint");
+    hint.textContent = "Gana la liga quien quede primero en el ranking al terminar los matches.";
+
+    for (const len of LEAGUE_LENGTHS) {
+      const btn = this.#el("button", "team-btn");
+      btn.type = "button";
+      btn.textContent = `${len} matches`;
+      btn.addEventListener("click", () => {
+        this.pendingLeagueLength = len;
+        grid.querySelectorAll(".team-btn").forEach(b => b.classList.toggle("selected", b === btn));
+        if (this.siguienteBtn) this.siguienteBtn.disabled = false;
+      });
+      grid.appendChild(btn);
+    }
+
+    const body = this.#el("div", "league-pick-body");
+    body.appendChild(grid);
+    body.appendChild(hint);
+
+    this.#render("🎯 Longitud de la liga", body, [
+      { label: "Atrás", onClick: () => this.#showMode() },
+      {
+        label: "Siguiente",
+        className: "primary js-siguiente",
+        disabled: true,
+        onClick: () => this.#showTeam()
+      }
+    ]);
+
+    this.siguienteBtn = this.actionsEl.querySelector(".js-siguiente");
+  }
+
+  /**
+   * Paso 2 (solo modos nivel): nivel inicial
+   */
+  #showLevel() {
+    const wrap = this.#el("div", "level-select-menu");
+    const label = this.#el("label");
+    label.htmlFor = "level-pick";
+    label.textContent = "Nivel";
+    this.levelInput = this.#el("input", "level-input");
+    this.levelInput.type = "number";
+    this.levelInput.id = "level-pick";
+    this.levelInput.min = LEVEL_MIN;
+    this.levelInput.max = LEVEL_MAX;
+    this.levelInput.value = 0;
+    this.levelInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") this.#showTeam();
+    });
+    wrap.appendChild(label);
+    wrap.appendChild(this.levelInput);
+
+    const hint = this.#el("div", "menu-hint");
+    hint.textContent = `Nivel inicial del match (${LEVEL_MIN}–${LEVEL_MAX})`;
+
+    const body = this.#el("div");
+    body.appendChild(wrap);
+    body.appendChild(hint);
+
+    this.#render("🎚️ Nivel inicial", body, [
+      { label: "Atrás", onClick: () => this.#showMode() },
+      { label: "Siguiente", className: "primary", onClick: () => this.#showTeam() }
+    ]);
   }
 
   #showTeam() {
@@ -146,17 +294,17 @@ export class MenuManager {
     this.#renderTeamInfo(details, teams[0][0]);
 
     this.#render("👥 Elige tu equipo", wrap, [
+      { label: "Atrás", onClick: () => this.#showMode() },
       {
         label: "Elegir",
         className: "primary js-elegir",
         disabled: true,
         onClick: () => {
           if (this.pendingTeam && this.#game()?.progressManager?.selectTeam(this.pendingTeam)) {
-            this.#showLevel();
+            this.#start();
           }
         }
-      },
-      { label: "Atrás", onClick: () => this.close() }
+      }
     ]);
 
     this.elegirBtn = this.actionsEl.querySelector(".js-elegir");
@@ -172,7 +320,6 @@ export class MenuManager {
     if (!stats) return;
     const predators = Object.keys(RACE_STATS).filter(t => RACE_STATS[t].aim.includes(team));
     const withEmoji = t => `${RACE_STATS[t].emoji} ${t}`;
-    const m = stats.movement;
 
     container.innerHTML = `
       <div class="team-details-head">
@@ -187,49 +334,70 @@ export class MenuManager {
       <div class="team-details-row">
         <span class="team-details-label">Le ganan:</span>
         <span>${predators.map(withEmoji).join(" · ") || "—"}</span>
-      </div>
-      <div class="team-details-row">
-        <span class="team-details-label">Stats:</span>
-        <span>Vida ${stats.health.max} · Daño ${stats.damage.amount} · Vel ${m.maxSpeed} · Giro ${m.rotationSpeed}</span>
       </div>`;
   }
 
-  #showLevel() {
-    const wrap = this.#el("div", "level-select-menu");
-    const label = this.#el("label");
-    label.htmlFor = "level-pick";
-    label.textContent = "Nivel";
-    this.levelInput = this.#el("input", "level-input");
-    this.levelInput.type = "number";
-    this.levelInput.id = "level-pick";
-    this.levelInput.min = LEVEL_MIN;
-    this.levelInput.max = LEVEL_MAX;
-    this.levelInput.value = 0;
-    this.levelInput.addEventListener("keydown", e => {
-      if (e.key === "Enter") this.#start();
-    });
-    wrap.appendChild(label);
-    wrap.appendChild(this.levelInput);
-
-    const hint = this.#el("div", "menu-hint");
-    hint.textContent = `Nivel inicial del match (0–${LEVEL_MAX})`;
-
-    const body = this.#el("div");
-    body.appendChild(wrap);
-    body.appendChild(hint);
-
-    this.#render("🎚️ Elige nivel", body, [
-      { label: "Atrás", onClick: () => this.#showTeam() },
-      { label: "Jugar", className: "primary", onClick: () => this.#start() }
-    ]);
-  }
-
   #start() {
+    const cfg = GAME_MODES[this.pendingMode] ?? GAME_MODES["infinito-muerte"];
     let level = +(this.levelInput?.value ?? 0);
     if (level < LEVEL_MIN || level > LEVEL_MAX || isNaN(level)) {
       level = 0;
     }
-    this.onStart(level);
+    this.onStart({
+      mode: this.pendingMode,
+      leagueLength: this.pendingLeagueLength ?? 50,
+      startLevel: cfg.kind === "level" ? level : 0,
+      team: this.pendingTeam
+    });
     this.close();
+  }
+
+  /**
+   * Resultado de una liga terminada
+   * @param {{ranking: Array<{name: string, emoji: string, score: number, kills: number, deaths: number}>, playerTeam: string, modeKey: string, leagueLength: number}} payload
+   */
+  showLeagueResult({ ranking, playerTeam, modeKey, leagueLength }) {
+    const winner = ranking[0];
+    const won = winner?.name === playerTeam;
+    const pos = ranking.findIndex(t => t.name === playerTeam) + 1;
+    const cfg = GAME_MODES[modeKey] ?? {};
+
+    const head = this.#el("div", "league-result-head");
+    head.innerHTML = `
+      <div class="league-result-title">${won ? "🏆 ¡Ganaste la liga!" : `🏆 Ha ganado ${winner?.emoji} ${winner?.name}`}</div>
+      <div class="menu-hint">${cfg.label ?? modeKey} · ${leagueLength} matches</div>`;
+
+    const grid = this.#el("div");
+    grid.innerHTML = `
+      <div class="score-head">
+        <span>#</span><span>Team</span><span>Wins</span><span>Kills</span><span>Deaths</span>
+      </div>
+      ${ranking
+        .map(
+          (t, i) => `
+        <div class="score-item rank-${i}${t.name === playerTeam ? " player" : ""}">
+          <span>${i === 0 ? "🏆" : i + 1}</span>
+          <span>${t.emoji} ${t.name}</span>
+          <span>${t.score}</span>
+          <span>${t.kills}</span>
+          <span>${t.deaths}</span>
+        </div>`
+        )
+        .join("")}`;
+
+    const footer = this.#el("div", "menu-hint");
+    footer.textContent = won
+      ? "Tu equipo se llevó la liga. 🎉"
+      : `Tu equipo (${RACE_STATS[playerTeam].emoji} ${playerTeam}) quedó en la posición ${pos}.`;
+
+    const body = this.#el("div");
+    body.appendChild(head);
+    body.appendChild(grid);
+    body.appendChild(footer);
+
+    this.#render("📊 Resultado de la liga", body, [
+      { label: "Jugar de nuevo", className: "primary", onClick: () => this.#handleNewGame() },
+      { label: "Menú", onClick: () => this.showPause(false) }
+    ]);
   }
 }

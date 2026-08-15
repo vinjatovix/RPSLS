@@ -12,13 +12,13 @@ export const GAME_CONFIG = Object.freeze({
     persist: false
   },
   mechanics: {
-    maxLevel: 1100,
     capture: true,
     limitCanvas: false,
     outDies: true,
     timeless: true,
     matchTimeBaseMs: 10000,
     matchTimeGrowthMs: 50,
+    matchTimeMaxMs: 60000,
     ai: {
       dangerRadius: 300
     }
@@ -27,17 +27,14 @@ export const GAME_CONFIG = Object.freeze({
     blood: true,
     snuff: false,
     debug: false,
-    dot: false,
-    collider: false,
-    arrow: false,
-    triangle: false
+    collider: false
   }
 });
 
 /**
  * Configuración de equipos/razas
  * Cada raza con estadísticas diferenciadas:
- * - rock: tanque lento (mucha vida, poca velocidad)
+ * - rock: mucha vida y buen daño
  * - lizard: rápida y frágil
  * - scissors: mucho daño
  * - spock: gran aceleración
@@ -49,7 +46,7 @@ export const RACE_STATS = Object.freeze({
     emoji: "🪨",
     team: "rocks",
     color: "gray",
-    description: "Tanque: mucha vida y buen daño",
+    description: "Mucha vida y buen daño",
     aim: ["scissors", "lizards"],
     health: { current: 460, max: 460 },
     damage: { amount: 9 },
@@ -125,7 +122,7 @@ export const RACE_STATS = Object.freeze({
     emoji: "🖖",
     team: "spocks",
     color: "yellow",
-    description: "Gran aceleración",
+    description: "Gran aceleración, frena bien",
     aim: ["rocks", "scissors"],
     health: { current: 430, max: 430 },
     damage: { amount: 10 },
@@ -150,15 +147,38 @@ export const RACE_STATS = Object.freeze({
  * weight: peso relativo para el spawn aleatorio
  */
 export const POWERUP_TYPES = Object.freeze({
-  heal: { emoji: "❤️", color: "#ff5c5c", duration: 0, amount: 160, weight: 20 },
-  speed: { emoji: "⚡", color: "#ffe14d", duration: 8000, amount: 1.5, weight: 16 },
-  damage: { emoji: "💥", color: "#ff8c00", duration: 8000, amount: 6, weight: 14 },
-  turn: { emoji: "🔄", color: "#6ec6ff", duration: 8000, amount: 1.5, weight: 12 },
-  armor: { emoji: "🛡️", color: "#8ce0ff", duration: 8000, amount: 0.5, weight: 12 },
-  slow: { emoji: "🐌", color: "#b388ff", duration: 8000, amount: 0.6, weight: 10, trap: true },
-  zap: { emoji: "💀", color: "#9e9e9e", duration: 0, amount: 80, weight: 10, trap: true },
-  time: { emoji: "⏰", color: "#ffd54f", duration: 0, amount: 5000, weight: 6 }
+  heal: { emoji: "❤️", label: "Heal", color: "#ff5c5c", duration: 0, amount: 0, weight: 20 },
+  speed: { emoji: "⚡", label: "Speed", color: "#ffe14d", duration: 15000, amount: 2, weight: 16 },
+  damage: { emoji: "💥", label: "Damage", color: "#ff8c00", duration: 15000, amount: 2, weight: 14 },
+  turn: { emoji: "🔄", label: "Turn", color: "#6ec6ff", duration: 15000, amount: 2, weight: 12 },
+  armor: { emoji: "🛡️", label: "Armor", color: "#8ce0ff", duration: 10000, amount: 0, weight: 12 },
+  slow: { emoji: "🐌", label: "Slow", color: "#b388ff", duration: 15000, amount: 0.6, weight: 10, trap: true },
+  zap: { emoji: "💀", label: "Zap", color: "#9e9e9e", duration: 0, amount: 0.5, weight: 10, trap: true },
+  time: { emoji: "⏰", label: "Time", color: "#ffd54f", duration: 0, amount: 5000, weight: 6 },
+  haste: { emoji: "🚀", label: "Turbo", color: "#ffa94d", duration: 15000, amount: 2, weight: 10 },
+  gold: { emoji: "💰", label: "Gold", color: "#ffd700", duration: 0, amount: 5, weight: 6 },
+  freeze: { emoji: "❄️", label: "Frozen", color: "#a8e6ff", duration: 5000, amount: 0, weight: 6, trap: true },
+  vampire: { emoji: "🧛", label: "Vampire", color: "#ff4d6d", duration: 10000, amount: 0.5, weight: 8 },
+  confusion: { emoji: "🌀", label: "Confused", color: "#c586ff", duration: 8000, amount: 0, weight: 6, trap: true },
+  regen: { emoji: "💚", label: "Regen", color: "#5cff8c", duration: 10000, amount: 40, weight: 8 }
 });
+
+/**
+ * Modos de juego
+ * capture: true = los muertos se convierten en el equipo del killer
+ * isLeague: true = partida limitada a un número de matches (length)
+ * kind: league = elige longitud | level = elige nivel inicial | infinite = sin límite
+ */
+export const GAME_MODES = Object.freeze({
+  "liga-muerte": { label: "Liga · Muerte", capture: false, isLeague: true, kind: "league" },
+  "infinito-muerte": { label: "Infinito · Muerte", capture: false, isLeague: false, kind: "infinite" },
+  "lvl-muerte": { label: "Nivel · Muerte", capture: false, isLeague: false, kind: "level" },
+  "liga-captura": { label: "Liga · Captura", capture: true, isLeague: true, kind: "league" },
+  "infinito-captura": { label: "Infinito · Captura", capture: true, isLeague: false, kind: "infinite" },
+  "lvl-captura": { label: "Nivel · Captura", capture: true, isLeague: false, kind: "level" }
+});
+
+export const LEAGUE_LENGTHS = Object.freeze([50, 100, 200]);
 
 /**
  * Mejoras del shop de entrenamiento

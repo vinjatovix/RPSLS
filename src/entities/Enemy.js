@@ -91,7 +91,12 @@ export class Enemy {
     let mult = 1;
     if (this.isBuffActive("speed")) mult *= this.buffs.speed.amount;
     if (this.isBuffActive("slow")) mult *= this.buffs.slow.amount;
+    if (this.isBuffActive("freeze")) mult *= this.buffs.freeze.amount;
     return mult;
+  }
+
+  getAccelMultiplier() {
+    return this.isBuffActive("haste") ? this.buffs.haste.amount : 1;
   }
 
   getTurnMultiplier() {
@@ -100,7 +105,7 @@ export class Enemy {
 
   getDamage() {
     let damage = this.baseDamage * this.damageMultiplier;
-    if (this.isBuffActive("damage")) damage += this.buffs.damage.amount;
+    if (this.isBuffActive("damage")) damage *= this.buffs.damage.amount;
     return damage;
   }
 
@@ -110,7 +115,11 @@ export class Enemy {
 
   #kill(enemy) {
     if (this.aim.includes(enemy.team)) {
-      enemy.life -= this.getDamage() * enemy.getIncomingDamageMultiplier();
+      const damage = this.getDamage() * enemy.getIncomingDamageMultiplier();
+      enemy.life -= damage;
+      if (this.isBuffActive("vampire") && damage > 0) {
+        this.life = Math.min(this.maxLife, this.life + damage * this.buffs.vampire.amount);
+      }
       if (enemy.life <= 0) {
         enemy.dead = true;
         enemy.killedBy = this.team;
@@ -178,11 +187,12 @@ export class Enemy {
 
   #calculateSpeed(angleDiff) {
     const speedMult = this.getSpeedMultiplier();
+    const accelMult = this.getAccelMultiplier();
     if (Math.abs(angleDiff) < Math.PI / 12) {
-      this.speed += this.acceleration * speedMult;
+      this.speed += this.acceleration * speedMult * accelMult;
     }
     if (Math.abs(angleDiff) > Math.PI / 8) {
-      this.speed -= this.deceleration * speedMult;
+      this.speed -= this.deceleration * speedMult * accelMult;
     }
 
     this.#limitSpeed();
@@ -224,6 +234,13 @@ export class Enemy {
   }
 
   #setTarget(allEnemies) {
+    if (this.isBuffActive("confusion")) {
+      this.closest = null;
+      this.fleeing = false;
+      this.aimX = Math.random() * this.game.canvasManager.getWidth();
+      this.aimY = Math.random() * this.game.canvasManager.getHeight();
+      return;
+    }
     this.closest = null;
     for (const enemy of allEnemies) {
       if (this.aim.includes(enemy.team) && !enemy.dead) {
@@ -265,6 +282,9 @@ export class Enemy {
   }
 
   update(deltaTime, allEnemies) {
+    if (this.isBuffActive("regen")) {
+      this.life = Math.min(this.maxLife, this.life + this.buffs.regen.amount * (deltaTime / 1000));
+    }
     this.#checkPosition();
     this.#setTarget(allEnemies);
     this.move(deltaTime);
@@ -289,51 +309,6 @@ export class Enemy {
     this.ctx.stroke();
   }
 
-  #drawDirectionArrow() {
-    this.ctx.strokeStyle = this.color;
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.x + this.width / 2, this.y + this.height / 2);
-    this.ctx.lineTo(
-      this.x + this.width / 2 + Math.cos(this.angle) * this.width,
-      this.y + this.height / 2 + Math.sin(this.angle) * this.height
-    );
-    this.ctx.stroke();
-  }
-
-  #drawDirectionDot() {
-    this.ctx.fillStyle = this.color;
-    this.ctx.beginPath();
-    this.ctx.arc(
-      this.x + this.width / 2 + Math.cos(this.angle) * this.width,
-      this.y + this.height / 2 + Math.sin(this.angle) * this.height,
-      5,
-      0,
-      Math.PI * 2
-    );
-    this.ctx.fill();
-  }
-
-  #drawDirectionTriangle() {
-    this.ctx.save();
-    this.ctx.globalAlpha = 0.4;
-    this.ctx.fillStyle = this.color;
-    this.ctx.beginPath();
-    this.ctx.moveTo(
-      this.x + this.width / 2 + Math.cos(this.angle) * this.width,
-      this.y + this.height / 2 + Math.sin(this.angle) * this.height
-    );
-    this.ctx.lineTo(
-      this.x + this.width / 2 + Math.cos(this.angle + Math.PI / 4) * this.width,
-      this.y + this.height / 2 + Math.sin(this.angle + Math.PI / 4) * this.height
-    );
-    this.ctx.lineTo(
-      this.x + this.width / 2 + Math.cos(this.angle - Math.PI / 4) * this.width,
-      this.y + this.height / 2 + Math.sin(this.angle - Math.PI / 4) * this.height
-    );
-    this.ctx.fill();
-    this.ctx.restore();
-  }
-
   #drawHealthBar() {
     this.ctx.save();
     this.ctx.fillStyle = "red";
@@ -347,9 +322,6 @@ export class Enemy {
     this.#drawHealthBar();
     this.game.options.effects.collider && this.#drawRectangle();
     this.game.options.effects.debug && this.#drawLineToAim();
-    this.game.options.effects.arrow && this.#drawDirectionArrow();
-    this.game.options.effects.dot && this.#drawDirectionDot();
-    this.game.options.effects.triangle && this.#drawDirectionTriangle();
     this.ctx.font = "20px Arial";
     this.drawEmoji();
   }

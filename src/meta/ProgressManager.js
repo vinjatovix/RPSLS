@@ -19,13 +19,15 @@ export class ProgressManager {
     this.eventBus = eventBus;
     this.saveKey = "idleSave-v1";
 
-    const saved = this.storageAdapter.load(this.saveKey);
-    const hasSave = !!saved;
-    this.credits = saved?.credits ?? 0;
-    this.selectedTeam = saved?.selectedTeam ?? "rocks";
-    this.teamChosen = hasSave ? (saved?.teamChosen ?? true) : false;
-    this.upgrades = saved?.upgrades ?? { powerupLuck: 0, creditRate: 0, timeCompression: 0 };
-    this.raceUpgrades = saved?.raceUpgrades ?? {};
+    // El progreso es de sesión: al recargar se empieza desde 0.
+    // Solo se persisten las opciones (gameOptions-v2: debug, snuff, ...).
+    this.storageAdapter.clear(this.saveKey);
+
+    this.credits = 0;
+    this.selectedTeam = "rocks";
+    this.teamChosen = false;
+    this.upgrades = { powerupLuck: 0, creditRate: 0, timeCompression: 0 };
+    this.raceUpgrades = {};
 
     RACE_TEAMS.forEach(team => {
       if (!this.raceUpgrades[team]) {
@@ -166,16 +168,7 @@ export class ProgressManager {
   }
 
   save() {
-    this.storageAdapter.save(
-      {
-        credits: this.credits,
-        selectedTeam: this.selectedTeam,
-        teamChosen: this.teamChosen,
-        upgrades: this.upgrades,
-        raceUpgrades: this.raceUpgrades
-      },
-      this.saveKey
-    );
+    // El progreso es de sesión: no se persiste nada en localStorage.
   }
 
   /**

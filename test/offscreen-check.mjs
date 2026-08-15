@@ -15,8 +15,6 @@ game.progressManager.selectTeam("rocks");
 game.progressManager.awardCredits = () => {};
 game.match = 0;
 game.onTeamChanged();
-game.inputHandler.setKeyState("c", false);
-game.inputHandler.setKeyState("o", true);
 game.powerupTimer = Infinity;
 
 const allSeen = new Set();

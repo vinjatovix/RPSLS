@@ -31,11 +31,15 @@ p.vx = 2;
 p.vy = 1;
 game.powerups = [p];
 
+const savedEnemies = game.enemies;
+game.enemies = [];
+
 const startX = p.x;
 const startY = p.y;
 for (let i = 0; i < 30; i++) game.update(16);
 assert(p.x !== startX || p.y !== startY, `powerup debe moverse (${startX},${startY}) -> (${p.x},${p.y})`);
 assert(!p.dead, "powerup no debe morir por movimiento");
+game.enemies = savedEnemies;
 
 const heal = new PowerUp({ game });
 heal.type = "heal";

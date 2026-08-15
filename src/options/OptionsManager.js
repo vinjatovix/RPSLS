@@ -41,14 +41,9 @@ export class OptionsManager {
     this.display.persist = keys.x;
     this.effects.debug = keys.d;
     this.effects.collider = keys.d;
-    this.effects.dot = keys.a;
     this.effects.blood = keys.b;
     this.effects.snuff = keys.s;
-
-    this.mechanics.limitCanvas = keys.l;
-    this.mechanics.outDies = keys.o;
-    this.mechanics.capture = keys.c;
-    // this.mechanics.timeless = keys.t; // Comentado en original
+    // outDies queda fijo en true (out = muerte) y capture se fija por modo
   }
 
   /**
@@ -57,24 +52,6 @@ export class OptionsManager {
   setMechanic(key, value) {
     if (key in this.mechanics) {
       this.mechanics[key] = value;
-    }
-  }
-
-  /**
-   * Modificar un efecto
-   */
-  setEffect(key, value) {
-    if (key in this.effects) {
-      this.effects[key] = value;
-    }
-  }
-
-  /**
-   * Modificar opción de display
-   */
-  setDisplay(key, value) {
-    if (key in this.display) {
-      this.display[key] = value;
     }
   }
 
@@ -105,6 +82,11 @@ export class OptionsManager {
         Object.assign(this.display, saved.display);
       }
     }
+    // Mecánicas fijas (no editables por teclado): out siempre es muerte,
+    // limitCanvas está obsoleto y capture se fija por modo.
+    this.mechanics.outDies = true;
+    this.mechanics.limitCanvas = false;
+    this.mechanics.capture = false;
   }
 
   /**
@@ -114,11 +96,7 @@ export class OptionsManager {
   syncKeysFromOptions() {
     this.inputHandler.setKeyState("x", this.display.persist);
     this.inputHandler.setKeyState("d", this.effects.debug);
-    this.inputHandler.setKeyState("a", this.effects.dot);
     this.inputHandler.setKeyState("b", this.effects.blood);
     this.inputHandler.setKeyState("s", this.effects.snuff);
-    this.inputHandler.setKeyState("l", this.mechanics.limitCanvas);
-    this.inputHandler.setKeyState("o", this.mechanics.outDies);
-    this.inputHandler.setKeyState("c", this.mechanics.capture);
   }
 }

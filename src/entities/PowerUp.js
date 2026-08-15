@@ -122,18 +122,19 @@ export class PowerUp {
       return;
     }
 
+    if (this.type === "gold") {
+      game.progressManager.awardCredits(5 + Math.floor(Math.random() * 21));
+      return;
+    }
+
     const targets = game.enemies.filter(e => !e.dead && e.team === team);
     for (const target of targets) {
       switch (this.type) {
         case "heal":
-          target.life = Math.min(target.maxLife, target.life + config.amount);
+          target.life = target.maxLife;
           break;
         case "zap":
-          target.life -= config.amount;
-          if (target.life <= 0) {
-            target.dead = true;
-            target.killedBy = null;
-          }
+          target.life = Math.max(1, Math.floor(target.life * config.amount));
           break;
         default:
           target.applyBuff(this.type, config.duration, config.amount);
@@ -143,7 +144,14 @@ export class PowerUp {
 
   #consume() {
     this.dead = true;
-    this.game.particles.powerUpBurst(this.x + this.width / 2, this.y + this.height / 2, this.color);
+    const config = POWERUP_TYPES[this.type];
+    this.game.particles.powerUpBurst(this.x + this.width / 2, this.y + this.height / 2, config.color);
+    this.game.particles.floatText(
+      this.x + this.width / 2,
+      this.y + this.height / 2,
+      config.label,
+      config.color
+    );
   }
 
   draw() {

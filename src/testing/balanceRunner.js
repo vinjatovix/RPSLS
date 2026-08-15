@@ -101,15 +101,13 @@ export async function runCampaign({
 } = {}) {
   installTestEnv();
 
-  const game = new Game({ startLevel: 0 });
+  const game = new Game({ startLevel: 0, mode: capture ? "infinito-captura" : "infinito-muerte" });
   game.progressManager.reset();
   game.progressManager.selectTeam("rocks");
   game.progressManager.awardCredits = () => {};
   game.match = 0;
   game.onTeamChanged();
 
-  game.inputHandler.setKeyState("c", capture);
-  game.inputHandler.setKeyState("o", true);
   if (!powerups) game.powerupTimer = Infinity;
 
   const nbuckets = Math.max(1, Math.ceil(maxLevel / BUCKET_SIZE));

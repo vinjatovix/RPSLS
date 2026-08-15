@@ -15,7 +15,7 @@ export class InputHandler {
   constructor({ onToggle = null } = {}) {
     this.keys = {};
     this.pressKeys = [];
-    this.toggleKeys = ["a", "b", "c", "d", "l", "s", "o", "t", "x"];
+    this.toggleKeys = ["b", "d", "s", "x"];
     this.onToggle = onToggle;
 
     // Inicializar todas las teclas

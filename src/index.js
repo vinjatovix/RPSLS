@@ -5,7 +5,7 @@
  * Añade capa idle: razas diferenciadas, powerups, créditos y entrenamiento
  */
 
-import { GAME_CONFIG, RACE_STATS, UPGRADES } from "./config/gameConfig.js";
+import { GAME_CONFIG, GAME_MODES, RACE_STATS, UPGRADES } from "./config/gameConfig.js";
 import { Clock } from "./core/Clock.js";
 import { EventBus } from "./core/EventBus.js";
 import { CanvasManager } from "./canvas/CanvasManager.js";
@@ -18,6 +18,7 @@ import { ProgressManager } from "./meta/ProgressManager.js";
 import { ALL_RACES, RACE_CLASSES } from "./entities/races.js";
 import { PowerUp } from "./entities/PowerUp.js";
 import { PowerUpBurst } from "./particles/PowerUpEffects.js";
+import { FloatingText } from "./particles/FloatingText.js";
 import { MenuManager } from "./ui/MenuManager.js";
 
 // ====================
@@ -32,7 +33,7 @@ class ScorePanel {
     this.roundInfoEl = document.getElementById("round-info");
   }
 
-  update(scoreManager, match, timeLeft, mechanics, lastWin, credits, started = true) {
+  update(scoreManager, match, timeLeft, mechanics, lastWin, credits, started = true, mode = null, leagueLength = null) {
     const ranking = scoreManager.getRanking();
     this.scoreListEl.innerHTML = `
       <div class="score-head">
@@ -58,7 +59,7 @@ class ScorePanel {
     this.roundInfoEl.innerHTML = !started
       ? `<p class="timer-active"><strong>👆 Elige tu equipo para empezar</strong></p>`
       : `
-      <p><strong>Match:</strong> ${match}</p>
+      <p><strong>Match:</strong> ${match}${mode?.isLeague && leagueLength ? `/${leagueLength}` : ""}</p>
       ${lastWin ? `<p><strong>Last:</strong> ${lastWin}</p>` : ""}
       <p><strong>Credits:</strong> ${credits} 💰</p>
       ${
@@ -99,11 +100,8 @@ class DebugDrawer {
     );
     this.ctx.fillText(`Timeless: ${this.options.mechanics.timeless}`, this.position, 4 * this.fontSize);
     this.ctx.fillText(`Capture: ${this.options.mechanics.capture}`, this.position, 5 * this.fontSize);
-    this.ctx.fillText(`LimitCanvas: ${this.options.mechanics.limitCanvas}`, this.position, 6 * this.fontSize);
-    this.ctx.fillText(`OutDies: ${this.options.mechanics.outDies}`, this.position, 7 * this.fontSize);
-    this.ctx.fillText(`Blood: ${this.options.effects.blood}`, this.position, 8 * this.fontSize);
-    this.ctx.fillText(`Snuff: ${this.options.effects.snuff}`, this.position, 9 * this.fontSize);
-    this.ctx.fillText(`Dot: ${this.options.effects.dot}`, this.position, 10 * this.fontSize);
+    this.ctx.fillText(`Blood: ${this.options.effects.blood}`, this.position, 6 * this.fontSize);
+    this.ctx.fillText(`Snuff: ${this.options.effects.snuff}`, this.position, 7 * this.fontSize);
     this.ctx.restore();
   }
 }
@@ -186,6 +184,10 @@ class ParticleManager {
     for (let i = 0; i < 8; i++) {
       this.addParticle(new PowerUpBurst({ ctx: this.ctx, x, y, color }));
     }
+  }
+
+  floatText(x, y, text, color) {
+    this.addParticle(new FloatingText({ ctx: this.ctx, x, y, text, color }));
   }
 
   update(deltaTime) {
@@ -272,7 +274,11 @@ class MetaPanel {
 }
 
 class Game {
-  constructor({ startLevel = 0 } = {}) {
+  constructor({ startLevel = 0, mode = "infinito-muerte", leagueLength = 50, team = null } = {}) {
+    this.modeKey = GAME_MODES[mode] ? mode : "infinito-muerte";
+    this.mode = GAME_MODES[this.modeKey];
+    this.leagueLength = leagueLength;
+
     // Inyectar dependencias
     this.inputHandler = new InputHandler();
     this.storageAdapter = new LocalStorageAdapter();
@@ -287,8 +293,8 @@ class Game {
       displayConfig: this.options.display
     });
 
-    // Redimensionar canvas según nivel inicial (fiel al original)
-    const { width, height } = this.canvasManager.resize(startLevel);
+    const resizeLevel = this.mode.kind === "level" ? startLevel : 0;
+    const { width, height } = this.canvasManager.resize(resizeLevel);
     this.width = width;
     this.height = height;
 
@@ -305,8 +311,8 @@ class Game {
     this.width = this.canvasManager.getWidth();
     this.height = this.canvasManager.getHeight();
     this.timeLeft = 10000;
-    this.match = startLevel;
-    this.enemiesQty = Math.floor(startLevel / 10) || 1;
+    this.match = this.mode.kind === "level" ? startLevel : 0;
+    this.enemiesQty = Math.floor(this.match / 10) || 1;
     this.scoreManager = new ScoreManager({ eventBus: this.eventBus });
     this.scorePanel = new ScorePanel();
     this.enemies = [];
@@ -314,12 +320,16 @@ class Game {
     this.particles = new ParticleManager({ game: this });
     this.destroyed = false;
     this.rafId = null;
+    this.onLeagueEnd = null;
 
     // Capa idle
     this.progressManager = new ProgressManager({
       storageAdapter: this.storageAdapter,
       eventBus: this.eventBus
     });
+    if (team && RACE_STATS[team]) {
+      this.progressManager.selectTeam(team);
+    }
     this.metaPanel = new MetaPanel({
       progressManager: this.progressManager,
       game: this
@@ -335,7 +345,11 @@ class Game {
     });
 
     if (this.progressManager.isTeamChosen()) {
-      this.#restart();
+      if (this.mode.kind === "level") {
+        this.#spawnMatch();
+      } else {
+        this.#restart();
+      }
     }
 
     this.#setupPointerEvents();
@@ -390,26 +404,15 @@ class Game {
     }
   }
 
-  #restart() {
+  #spawnMatch() {
     this.options.setMechanic("timeless", true);
-    this.match++;
+    this.options.setMechanic("capture", this.mode.capture);
     this.enemiesQty = Math.floor(this.match / 10) || 1;
 
-    if (this.match >= 50) {
-      this.options.setMechanic("capture", false);
-    }
-    if (this.match >= 100) {
-      this.options.setEffect("snuff", false);
-    }
-
-    if (this.width < this.options.display.maxWidth) {
-      const { width, height } = this.canvasManager.resize(1.003 * this.match);
-      this.width = width;
-      this.height = height;
-    }
-
-    this.timeLeft =
-      GAME_CONFIG.mechanics.matchTimeBaseMs + this.match * GAME_CONFIG.mechanics.matchTimeGrowthMs;
+    this.timeLeft = Math.min(
+      GAME_CONFIG.mechanics.matchTimeMaxMs,
+      GAME_CONFIG.mechanics.matchTimeBaseMs + this.match * GAME_CONFIG.mechanics.matchTimeGrowthMs
+    );
 
     this.timeSinceLastAction = 0;
     this.enemies = [];
@@ -424,6 +427,36 @@ class Game {
       });
     }
     this.powerups = [];
+  }
+
+  #restart() {
+    this.match++;
+
+    if (this.mode.isLeague && this.match > this.leagueLength) {
+      this.#endLeague();
+      return;
+    }
+
+    if (this.width < this.options.display.maxWidth) {
+      const { width, height } = this.canvasManager.resize(1.003 * this.match);
+      this.width = width;
+      this.height = height;
+    }
+
+    this.#spawnMatch();
+  }
+
+  #endLeague() {
+    this.paused = true;
+    const ranking = this.scoreManager.sortRanking(
+      Object.entries(this.scoreManager.teams).map(([name, team]) => ({ name, ...team }))
+    );
+    this.onLeagueEnd?.({
+      ranking,
+      playerTeam: this.progressManager.selectedTeam,
+      modeKey: this.modeKey,
+      leagueLength: this.leagueLength
+    });
   }
 
   #captureEnemy(killed) {
@@ -550,7 +583,9 @@ class Game {
       this.options.mechanics,
       this.lastWin,
       this.progressManager.credits,
-      this.progressManager.isTeamChosen()
+      this.progressManager.isTeamChosen(),
+      this.mode,
+      this.leagueLength
     );
   }
 
@@ -569,16 +604,12 @@ class Game {
 
 document.addEventListener("DOMContentLoaded", () => {
   if (window.__NO_AUTOSTART__) return;
-  const panelToggle = document.querySelector(".panel-toggle");
-  const controlsPanel = document.getElementById("controls-panel");
-  panelToggle?.addEventListener("click", () => {
-    controlsPanel.classList.toggle("collapsed");
-  });
 
   let game = null;
   let rafId = null;
 
-  const start = (startLevel = 0) => {
+  const start = (config = {}) => {
+    const { mode = "infinito-muerte", leagueLength = 50, startLevel = 0, team = null } = config;
     let level = +startLevel;
     if (level < 0 || level > 2000 || isNaN(level)) {
       level = 0;
@@ -587,8 +618,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (game) game.destroy();
     cancelAnimationFrame(rafId);
 
-    const instance = new Game({ startLevel: level });
+    const instance = new Game({ startLevel: level, mode, leagueLength, team });
     game = instance;
+
+    instance.onLeagueEnd = payload => menu.showLeagueResult(payload);
 
     const animate = () => {
       if (instance.destroyed) return;
@@ -604,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
     onStart: start
   });
 
-  start(0);
+  start();
 
   if (!game.progressManager.isTeamChosen()) {
     menu.showPause(false);
