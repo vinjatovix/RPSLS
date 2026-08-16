@@ -1,42 +1,55 @@
 export class ScorePanel {
-  constructor() {
+  #state = {
+    ranking: []
+  };
+
+  constructor({ scoreManager, eventBus }) {
+    this.scoreManager = scoreManager;
+    this.eventBus = eventBus;
     this.scoreListElement = document.getElementById("score-list");
-    this.roundInfoElement = document.getElementById("round-info");
+
+    this._handlers = {
+      "score:update": () => this.#handleScoreUpdate(),
+    };
+
+    for (const [event, handler] of Object.entries(this._handlers)) {
+      this.eventBus.subscribe(event, handler);
+    }
+
+    this.draw();
   }
 
-  update(scoreManager, match, timeLeft, mechanics, lastWin, credits, started = true, mode = null, leagueLength = null) {
-    const ranking = scoreManager.getRanking();
-    this.scoreListElement.innerHTML = `
-      <div class="score-head">
-        <span>Team</span>
-        <span>Wins</span>
-        <span>Kills</span>
-        <span>Deaths</span>
-        <span>Ratio</span>
-      </div>
-      ${ranking
-        .map(
-          (team, i) => `
-        <div class="score-item rank-${i}">
-          <span>${team.emoji}</span>
-          <span>${team.score}</span>
-          <span>${team.kills}</span>
-          <span>${team.deaths}</span>
-          <span>${team.ratio.toFixed(2)}</span>
-        </div>`
-        )
-        .join("")}`;
+  #handleScoreUpdate() {
+    this.draw();
+  }
 
-    this.roundInfoElement.innerHTML = !started
-      ? `<p class="timer-active"><strong>👆 Choose your team to start</strong></p>`
-      : `
-      <p><strong>Match:</strong> ${match}${mode?.isLeague && leagueLength ? `/${leagueLength}` : ""}</p>
-      ${lastWin ? `<p><strong>Last:</strong> ${lastWin} won</p>` : ""}
-      <p><strong>Credits:</strong> ${credits} 💰</p>
-      ${
-        !mechanics.timeless
-          ? `<p class="timer-active"><strong>Time:</strong> ${Math.round(timeLeft / 1000)}s</p>`
-          : ""
-      }`;
+  destroy() {
+    for (const [event, handler] of Object.entries(this._handlers)) {
+      this.eventBus.unsubscribe(event, handler);
+    }
+  }
+
+  draw() {
+    const ranking = this.scoreManager.getRanking();
+
+    if (this.scoreListElement) {
+      this.scoreListElement.innerHTML = `
+        <div class="score-head">
+          <span>Team</span>
+          <span>Wins</span>
+          <span>Kills</span>
+          <span>Deaths</span>
+          <span>Ratio</span>
+        </div>
+        ${ranking.map((team, i) => `
+          <div class="score-item rank-${i}">
+            <span>${team.emoji} ${team.name}</span>
+            <span>${team.score}</span>
+            <span>${team.kills}</span>
+            <span>${team.deaths}</span>
+            <span>${team.ratio.toFixed(2)}</span>
+          </div>
+        `).join("")}`;
+    }
   }
 }

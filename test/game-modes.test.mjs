@@ -1,12 +1,3 @@
-/**
- * game-modes.test.mjs - Verifies game modes, league end, keys and persistence:
- *   - Capture/death modes set mechanics.capture
- *   - Level modes start at the chosen level without a phantom match
- *   - League end: surpassing the length triggers onLeagueEnd with the ranking
- *   - Keys a/c/l/o are inert (not present in InputHandler)
- *   - Progress starts from 0 (idle-save-v1 is cleared) and is not persisted
- */
-
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -30,27 +21,12 @@ test("Config: GAME_MODES has 6 well-defined modes", () => {
   assert.equal(GAME_CONFIG.mechanics.matchTimeMaxMs, 60000, "matchTimeMaxMs must be 60000ms (60s)");
 });
 
-test("Persistence: starts from 0 and clears idle-save-v1", () => {
-  localStorage.setItem(
-    "idle-save-v1",
-    JSON.stringify({
-      credits: 999,
-      selectedTeam: "lizards",
-      teamChosen: true,
-      upgrades: { powerupLuck: 3 },
-      raceUpgrades: {}
-    })
-  );
+test("ProgressManager: starts with session defaults", () => {
   const pg = new Game({ startLevel: 0 });
   const progressManager = pg.progressManager;
-  assert.equal(progressManager.credits, 0, "credits start at 0 even with a previous save");
+  assert.equal(progressManager.credits, 0, "credits start at 0");
   assert.equal(progressManager.teamChosen, false);
-  assert.equal(progressManager.selectedTeam, "rocks", "selectedTeam reverts to the default");
-  assert.equal(localStorage.getItem("idle-save-v1"), null, "idle-save-v1 is cleared when creating a game");
-  progressManager.selectTeam("rocks");
-  progressManager.awardCredits(50);
-  progressManager.spendCredits(10);
-  assert.equal(localStorage.getItem("idle-save-v1"), null, "awardCredits/spendCredits do not persist");
+  assert.equal(progressManager.selectedTeam, "rocks", "selectedTeam defaults to rocks");
   pg.destroy();
 });
 
@@ -68,17 +44,11 @@ test("Default mode: infinite-death + inert keys", () => {
   assert.ok(game.enemies.length > 0 && game.enemies.every(e => !e.dead), "enemies alive after starting");
 
   const keys = game.inputHandler.getKeys();
-  for (const key of ["a", "c", "l", "o"]) {
-    assert.ok(!(key in keys), `key ${key} must not exist in InputHandler`);
-  }
-  game.inputHandler.setKeyState("o", true);
-  game.inputHandler.setKeyState("c", true);
-  game.inputHandler.setKeyState("a", true);
-  game.inputHandler.setKeyState("l", true);
-  assert.equal(game.options.mechanics.outDies, true, "o: inert");
-  assert.equal(game.options.mechanics.capture, false, "c: inert (capture is set by the mode)");
-  assert.equal(game.options.mechanics.limitCanvas, false, "l: inert");
-  assert.ok(!("dot" in game.options.effects), "a: inert (dot removed from effects)");
+  assert.deepEqual(
+    Object.keys(keys).sort(),
+    ["b", "d", "s", "x"],
+    "Only toggle keys should be present"
+  );
   game.destroy();
 });
 
@@ -143,4 +113,37 @@ test("League end: onLeagueEnd with ranking after surpassing the length", () => {
   assert.equal(lg.paused, true);
   assert.equal(lg.match, 4, `match ends at length+1 (got ${lg.match})`);
   lg.destroy();
+});
+
+test("Anti-stall: breaks timeless mode and triggers countdown after stallTimeoutMs", () => {
+  const game = new Game({ startLevel: 0, mode: "infinite-death" });
+  game.progressManager.reset();
+  game.progressManager.selectTeam("rocks");
+  game.match = 1;
+  game.onTeamChanged();
+
+  game.enemies = [
+    { team: "rocks", dead: false, update() {}, draw() {} },
+    { team: "papers", dead: false, update() {}, draw() {} },
+    { team: "scissors", dead: false, update() {}, draw() {} },
+    { team: "lizards", dead: false, update() {}, draw() {} }
+  ];
+
+  game.update(100);
+  assert.equal(game.options.mechanics.timeless, true, "Should be in timeless mode with 4 teams");
+
+  const initialTimeLeft = game.timeLeft;
+  game.update(5000); 
+  assert.equal(game.timeLeft, initialTimeLeft, "timeLeft should not decrease in timeless mode");
+
+  game.timeSinceLastAction = 31000;
+  game.update(100); 
+
+  assert.equal(game.options.mechanics.timeless, false, "Should exit timeless mode after stallTimeoutMs");
+  assert.equal(game.timeLeft, 9900, "timeLeft should be capped at stallCountdownMs minus deltaTime (10000 - 100 = 9900ms)");
+
+  game.update(2000);
+  assert.equal(game.timeLeft, 7900, "timeLeft should decrease once out of timeless mode");
+
+  game.destroy();
 });

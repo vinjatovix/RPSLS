@@ -8,7 +8,11 @@ export class ScoreManager {
 
     this.teams = {};
     for (const team of Object.keys(RACE_STATS)) {
-      this.teams[team] = { emoji: RACE_STATS[team].emoji, ...clone(this.initialValues) };
+      this.teams[team] = { 
+        emoji: RACE_STATS[team].emoji, 
+        name: RACE_STATS[team].team, 
+        ...clone(this.initialValues) 
+      };
     }
   }
 
@@ -32,6 +36,7 @@ export class ScoreManager {
         : this.teams[victimTeam].kills;
 
     this.eventBus?.emit("kill", { killerTeam, victimTeam });
+    this.eventBus?.emit("score:update");
   }
 
   addWin(team, { match = 0 } = {}) {
@@ -44,6 +49,7 @@ export class ScoreManager {
       match,
       mvp: this.isMvp(team)
     });
+    this.eventBus?.emit("score:update");
   }
 
   isMvp(team) {
@@ -73,6 +79,7 @@ export class ScoreManager {
     Object.keys(this.teams).forEach(teamName => {
       this.teams[teamName] = {
         emoji: this.teams[teamName].emoji,
+        name: teamName,
         ...clone(this.initialValues)
       };
     });

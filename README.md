@@ -46,6 +46,7 @@ The game operates on an evolutionary "predator-prey" loop.
 - **The Ecosystem:** 5 distinct races (`rocks`, `papers`, `scissors`, `lizards`, `spocks`), each with unique biomechanics (speed, rotation acceleration, health, and damage).
 - **Progression:** An upgrade system that allows players to invest credits into permanent stat boosts (Health, Damage, Speed, etc.) and "meta" upgrades (Power-up luck, Simulation compression).
 - **Dynamic Environment:** A continuous stream of `POWERUP_TYPES` (Heal, Speed, Armor, etc.) and `TRAP` power-ups (Slow, Confusion, Freeze) that create unpredictable combat encounters.
+- **Anti-Stall & Timeless Logic:** The engine dynamically transitions to a "timeless" mode when 4+ teams are alive, suspending the timer. To prevent endless deadlocks/orbits, a **30-second anti-stall countdown** automatically kicks in if no kills occur, forcing a temporary countdown of 10 seconds to keep the simulation flowing.
 
 ---
 
@@ -56,12 +57,25 @@ The project is built as a **headless-capable, pure ESM engine**. It requires no 
 - **Engine Core (`src/index.js`):** The main loop and game bootstrap.
 - **Deterministic Simulation:** Uses seeded PRNG (`mulberry3    32`) to ensure that any simulation or test is 100% reproducible.
 - **Headless Capability:** The entire game logic is decoupled from the DOM, allowing the `src/testing/` harness to run high-speed simulations in a terminal.
+- **Event-Driven UI Decoupling:** Employs a centralized `EventBus` to emit and subscribe to key state changes, fully decoupling core game mechanics from the DOM layout and UI components (like `ScorePanel`, `InfoPanel`, and `MetaPanel`).
 - **Data Immutability:** Core configurations (`gameConfig.js`) are deeply frozen to prevent runtime side-effects.
 
 ### Tech Stack
 - **Runtime:** Node.js $\ge$ 22 (using native `node:test`)
 - **Bundler:** `esbuild` (for production-ready, minified ESM)
 - **Deployment:** GitHub Actions $\to$ GitHub Pages
+
+---
+
+## 🗺 Design Specifications & Roadmap
+
+To maintain exceptional engineering standards, all major features, performance optimizations, and structural refactorings are designed through structured specifications before implementation. You can find them under `docs/specs/`:
+
+- **Spec #1:** Event-Driven UI Decoupling (Implemented)
+- **Spec #2:** Spatial Partitioning for $O(N^2)$ Collision Mitigation (Planned)
+- **Spec #3:** Particle Object Pooling to reduce GC pressure (Planned)
+- **Spec #12:** Unit Test Infrastructure & Coverage Expansion (In Progress)
+- **Spec #13:** Canvas Rendering Optimization: Caching & Batching (Planned)
 
 ---
 
