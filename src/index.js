@@ -1,10 +1,3 @@
-/**
- * Application entry point
- * Integrates all the refactored modules
- * Keeps the original logic without behavior changes
- * Adds the idle layer: differentiated races, power-ups, credits and training
- */
-
 import { GAME_CONFIG, GAME_MODES, RACE_STATS, UPGRADES, POWERUP_TYPES, LEAGUE_LENGTHS } from "./config/gameConfig.js";
 import { Clock } from "./core/Clock.js";
 import { EventBus } from "./core/EventBus.js";
@@ -22,6 +15,7 @@ import { EnemyFactory } from "./entities/EnemyFactory.js";
 import { PowerUp } from "./entities/PowerUp.js";
 import { ParticleSystem } from "./particles/ParticleSystem.js";
 import { MenuController } from "./ui/MenuController.js";
+import { InfoPanel } from "./ui/InfoPanel.js";
 import { ScorePanel } from "./ui/ScorePanel.js";
 import { DebugDrawer } from "./ui/DebugDrawer.js";
 import { MetaPanel } from "./ui/MetaPanel.js";
@@ -65,31 +59,39 @@ class Game {
     this.timeLeft = GAME_CONFIG.meta.initialTimeLeftMs;
     this.match = this.mode.kind === "level" ? startLevel : 0;
     this.enemyGroupCount = Math.max(1, Math.floor(this.match / GAME_CONFIG.meta.enemiesPerLevel));
+    this.progressManager = new ProgressManager({
+      eventBus: this.eventBus
+    });
+    if (team && RACE_STATS[team]) {
+      this.progressManager.selectTeam(team);
+    }
+
     this.scoreManager = new ScoreManager({ eventBus: this.eventBus });
-    this.scorePanel = new ScorePanel();
+    this.scorePanel = new ScorePanel({ 
+      scoreManager: this.scoreManager, 
+      eventBus: this.eventBus 
+    });
+    this.infoPanel = new InfoPanel({ 
+      progressManager: this.progressManager, 
+      eventBus: this.eventBus 
+    });
     this.enemies = [];
     this.lastWin = null;
     this.particles = new ParticleSystem({ game: this });
     this.destroyed = false;
     this.animationFrameId = null;
     this.onLeagueEnd = null;
-
-    this.progressManager = new ProgressManager({
-      storageAdapter: this.storageAdapter,
-      eventBus: this.eventBus
-    });
-    if (team && RACE_STATS[team]) {
-      this.progressManager.selectTeam(team);
-    }
     this.metaPanel = new MetaPanel({
       progressManager: this.progressManager,
-      game: this
+      eventBus: this.eventBus
     });
 
     this.gameTime = 0;
+    this.lastMechanicTimeless = null;
     this.powerups = [];
     this.powerupTimer = GAME_CONFIG.meta.powerupSpawnIntervalMs / this.progressManager.getPowerupLuck();
     this.timeSinceLastAction = 0;
+    this.lastTickSecond = -1;
     this.paused = false;
     this.eventBus.subscribe("kill", () => {
       this.timeSinceLastAction = 0;
@@ -106,26 +108,27 @@ class Game {
     this.#setupPointerEvents();
   }
 
-  /**
-   * When the team changes, the match restarts to apply the upgrades
-   */
   onTeamChanged() {
     this.#restart();
   }
 
-  /**
-   * Stop the game and release all its resources
-   */
   destroy() {
     this.destroyed = true;
     cancelAnimationFrame(this.animationFrameId);
     this.inputHandler.destroy();
     this.canvasAdapter.getCanvas().removeEventListener("pointerdown", this.boundPointerDown);
+    
+    if (this.scorePanel && typeof this.scorePanel.destroy === 'function') {
+      this.scorePanel.destroy();
+    }
+    if (this.infoPanel && typeof this.infoPanel.destroy === 'function') {
+      this.infoPanel.destroy();
+    }
+    if (this.metaPanel && typeof this.metaPanel.destroy === 'function') {
+      this.metaPanel.destroy();
+    }
   }
 
-  /**
-   * Listen for clicks on the canvas to pick up power-ups with the player's team
-   */
   #setupPointerEvents() {
     this.boundPointerDown = event => this.#handlePointerDown(event);
     this.canvasAdapter.getCanvas().addEventListener("pointerdown", this.boundPointerDown);
@@ -166,6 +169,13 @@ class Game {
     );
 
     this.timeSinceLastAction = 0;
+    this.eventBus?.emit("game:match-start", { 
+      matchNumber: this.match, 
+      mode: this.mode, 
+      leagueLength: this.leagueLength,
+      timeLeft: this.timeLeft,
+      timeless: this.options.mechanics.timeless
+    });
     this.enemies = EnemyFactory.spawnMatch(
       this,
       this.progressManager.selectedTeam,
@@ -176,6 +186,12 @@ class Game {
   }
 
   #restart() {
+    this.eventBus?.emit("game:match-end", { 
+      match: this.match,
+      winners: this.lastWin,
+      modeKey: this.modeKey,
+      leagueLength: this.leagueLength
+    });
     this.match++;
 
     if (this.mode.isLeague && this.match > this.leagueLength) {
@@ -227,20 +243,33 @@ class Game {
     const alive = this.enemies.filter(enemy => !enemy.dead).map(enemy => enemy.team);
     const unique = [...new Set(alive)];
 
-    if (unique.length <= 3) {
-      this.options.setMechanic("timeless", false);
+    this.timeSinceLastAction += deltaTime;
+    const isStalled = this.timeSinceLastAction > GAME_CONFIG.meta.stallTimeoutMs && unique.length > 2;
+    const shouldBeTimeless = unique.length > 3 && !isStalled;
+
+    if (this.options.mechanics.timeless !== shouldBeTimeless) {
+      this.options.setMechanic("timeless", shouldBeTimeless);
+    }
+
+    if (isStalled) {
+      this.timeLeft = Math.min(this.timeLeft, GAME_CONFIG.meta.stallCountdownMs);
     }
 
     if (!this.options.mechanics.timeless) {
       this.timeLeft -= deltaTime;
     }
 
-    // Anti-stall: if there are no kills and 3+ teams remain,
-    // force a short countdown so the match always flows
-    this.timeSinceLastAction += deltaTime;
-    if (this.timeSinceLastAction > GAME_CONFIG.meta.stallTimeoutMs && unique.length > 2) {
-      this.options.setMechanic("timeless", false);
-      this.timeLeft = Math.min(this.timeLeft, GAME_CONFIG.meta.stallCountdownMs);
+    if (!this.options.mechanics.timeless) {
+      const currentSecond = Math.floor(this.timeLeft / 1000);
+      if (currentSecond !== this.lastTickSecond) {
+        this.lastTickSecond = currentSecond;
+        this.eventBus?.emit("tick", { timeLeft: this.timeLeft });
+      }
+    }
+
+    if (this.options.mechanics.timeless !== this.lastMechanicTimeless) {
+      this.lastMechanicTimeless = this.options.mechanics.timeless;
+      this.eventBus?.emit("game:mechanics-change", { timeless: this.options.mechanics.timeless });
     }
 
     if (unique.length === 1) {
@@ -262,7 +291,7 @@ class Game {
           this.lastWin = unique[0];
         }
       } else {
-        this.lastWin = "DRAW";
+      this.lastWin = "DRAW";
       }
 
       this.#restart();
@@ -313,17 +342,6 @@ class Game {
     for (const enemy of this.enemies) {
       enemy.draw();
     }
-    this.scorePanel.update(
-      this.scoreManager,
-      this.match,
-      this.timeLeft,
-      this.options.mechanics,
-      this.lastWin,
-      this.progressManager.credits,
-      this.progressManager.isTeamChosen(),
-      this.mode,
-      this.leagueLength
-    );
   }
 
   run() {
@@ -351,6 +369,7 @@ document.addEventListener("DOMContentLoaded", () => {
   for (const classes of [
     Game,
     ScorePanel,
+    InfoPanel,
     DebugDrawer,
     MetaPanel,
     ParticleSystem,

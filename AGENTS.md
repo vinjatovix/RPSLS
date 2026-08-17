@@ -10,7 +10,7 @@
 2. **Test Guard**: `npm test` fails if deviation >**±7pp**.
 3. **Immutability**: `src/config/gameConfig.js` is frozen. Do not suggest runtime mutations.
 4. **Determinism**: Logic must be deterministic (seeded PRNG). No `Math.random()`.
-5. **Code Style**: Strict adherence to **SOLID, DRY, and KISS**.
+5. **Code Style**: Strict adherence to **SOLID, DRY, KISS, YAGNI**.
    - **Parameter Rule**: Functions with >3 arguments **must** use a single options object.
 
 ## Workflow

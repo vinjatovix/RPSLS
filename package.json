@@ -16,7 +16,8 @@
     "preview": "node scripts/serve.mjs"
   },
   "devDependencies": {
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.0",
+    "jsdom": "^30.0.1"
   },
   "engines": {
     "node": ">=22"

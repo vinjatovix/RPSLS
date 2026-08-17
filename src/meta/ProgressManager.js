@@ -14,14 +14,8 @@ export class ProgressManager {
   #upgrades = {};
   #raceUpgrades = {};
 
-  constructor({ storageAdapter, eventBus }) {
-    this.storageAdapter = storageAdapter;
+  constructor({ eventBus }) {
     this.eventBus = eventBus;
-    this.saveKey = "idle-save-v1";
-
-    // Progress is session-based: on reload it starts from 0.
-    // Only options are persisted (game-options-v2: debug, snuff, ...).
-    this.storageAdapter.clear(this.saveKey);
 
     this.#upgrades = this.#defaultUpgrades();
     this.#raceUpgrades = this.#defaultRaceUpgrades();
@@ -80,16 +74,14 @@ export class ProgressManager {
   awardCredits(base) {
     if (!isNonNegativeFinite(base)) return;
     this.#credits += Math.round(base * this.getCreditMultiplier());
-    this.save();
-    this.eventBus.emit("credits-updated", { credits: this.#credits });
+    this.eventBus.emit("progress:update", { credits: this.#credits });
   }
 
   spendCredits(amount) {
     if (!isNonNegativeFinite(amount)) return false;
     if (this.#credits < amount) return false;
     this.#credits -= amount;
-    this.save();
-    this.eventBus.emit("credits-updated", { credits: this.#credits });
+    this.eventBus.emit("progress:update", { credits: this.#credits });
     return true;
   }
 
@@ -101,7 +93,6 @@ export class ProgressManager {
     if (!RACE_TEAMS.includes(team)) return false;
     this.#selectedTeam = team;
     this.#teamChosen = true;
-    this.save();
     return true;
   }
 
@@ -132,7 +123,7 @@ export class ProgressManager {
     } else {
       this.#upgrades[key] += 1;
     }
-    this.save();
+    this.eventBus.emit("progress:update", { credits: this.#credits });
     return true;
   }
 
@@ -193,17 +184,12 @@ export class ProgressManager {
     return 1 + 0.15 * (this.#upgrades.collectRadius ?? 0);
   }
 
-  save() {
-    // Progress is session-based: nothing is persisted in localStorage.
-  }
-
   reset() {
     this.#credits = 0;
     this.#selectedTeam = "rocks";
     this.#teamChosen = false;
     this.#upgrades = this.#defaultUpgrades();
     this.#raceUpgrades = this.#defaultRaceUpgrades();
-    this.save();
-    this.eventBus.emit("credits-updated", { credits: 0 });
+    this.eventBus.emit("progress:update", { credits: 0 });
   }
 }

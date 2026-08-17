@@ -1,23 +1,65 @@
 import { UPGRADES, RACE_STATS } from "../config/gameConfig.js";
 
 export class MetaPanel {
-  constructor({ progressManager, game }) {
+  #state = {
+    selectedTeam: null,
+    credits: 0
+  };
+
+  constructor({ progressManager, eventBus }) {
     this.progressManager = progressManager;
-    this.game = game;
+    this.eventBus = eventBus;
     this.shopListElement = document.getElementById("shop-list");
     this.creditsElement = document.getElementById("credits");
 
-    this.progressManager.eventBus.subscribe("credits-updated", () => this.render());
-    this.render();
+    this._handlers = {
+      "progress:update": (e) => this.#handleProgressUpdate(e),
+      "game:match-start": (e) => this.#handleMatchStart(e)
+    };
+
+    for (const [event, handler] of Object.entries(this._handlers)) {
+      this.eventBus.subscribe(event, handler);
+    }
+
+    this.#updateInternalState();
+    this.draw();
   }
 
-  render() {
-    const selected = this.progressManager.selectedTeam;
-    this.creditsElement.textContent = this.progressManager.credits;
-    this.#renderShop(selected);
+  #updateInternalState() {
+    this.#state.selectedTeam = this.progressManager.selectedTeam;
+    this.#state.credits = this.progressManager.credits;
+  }
+
+  #handleProgressUpdate({ credits }) {
+    this.#state.credits = credits;
+    this.draw();
+  }
+
+  #handleMatchStart() {
+    this.#updateInternalState();
+    this.draw();
+  }
+
+  destroy() {
+    for (const [event, handler] of Object.entries(this._handlers)) {
+      this.eventBus.unsubscribe(event, handler);
+    }
+  }
+
+  draw() {
+    const { selectedTeam, credits } = this.#state;
+    if (!selectedTeam) return;
+
+    if (this.creditsElement) {
+      this.creditsElement.textContent = credits;
+    }
+
+    this.#renderShop(selectedTeam);
   }
 
   #renderShop(selected) {
+    if (!this.shopListElement) return;
+
     this.shopListElement.innerHTML = "";
 
     const perRace = Object.entries(UPGRADES).filter(([, config]) => config.perRace);
@@ -57,10 +99,9 @@ export class MetaPanel {
       </div>
       <button type="button" class="shop-btn" ${canAfford ? "" : "disabled"}>${cost} 💰</button>
     `;
-    item.querySelector(".shop-btn").addEventListener("click", () => {
-      this.progressManager.buyUpgrade(key, team);
-      this.render();
-    });
+     item.querySelector(".shop-btn").addEventListener("click", () => {
+       this.progressManager.buyUpgrade(key, team);
+     });
     container.appendChild(item);
   }
 }
