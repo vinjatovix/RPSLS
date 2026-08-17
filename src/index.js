@@ -19,6 +19,7 @@ import { InfoPanel } from "./ui/InfoPanel.js";
 import { ScorePanel } from "./ui/ScorePanel.js";
 import { DebugDrawer } from "./ui/DebugDrawer.js";
 import { MetaPanel } from "./ui/MetaPanel.js";
+import { MatchManager } from "./entities/MatchManager.js";
 
 class Game {
   constructor({ startLevel = 0, mode = "infinite-death", leagueLength = 50, team = null } = {}) {
@@ -56,9 +57,6 @@ class Game {
     this.ctx = this.canvasAdapter.getContext();
     this.width = this.canvasAdapter.getWidth();
     this.height = this.canvasAdapter.getHeight();
-    this.timeLeft = GAME_CONFIG.meta.initialTimeLeftMs;
-    this.match = this.mode.kind === "level" ? startLevel : 0;
-    this.enemyGroupCount = Math.max(1, Math.floor(this.match / GAME_CONFIG.meta.enemiesPerLevel));
     this.progressManager = new ProgressManager({
       eventBus: this.eventBus
     });
@@ -67,6 +65,37 @@ class Game {
     }
 
     this.scoreManager = new ScoreManager({ eventBus: this.eventBus });
+    this.matchManager = new MatchManager({
+      game: this,
+      eventBus: this.eventBus,
+      options: this.options,
+      startLevel
+    });
+
+    this.eventBus.subscribe("game:match-start", ({ matchNumber }) => {
+      const enemyGroupCount = Math.max(1, Math.floor(matchNumber / GAME_CONFIG.meta.enemiesPerLevel));
+      this.enemies = EnemyFactory.spawnMatch(
+        this,
+        this.progressManager.selectedTeam,
+        this.progressManager,
+        enemyGroupCount
+      );
+      this.powerups = [];
+    });
+
+    this.eventBus.subscribe("game:league-ended", () => {
+      this.matchManager.paused = true;
+      const ranking = this.scoreManager.sortRanking(
+        Object.entries(this.scoreManager.teams).map(([name, team]) => ({ name, ...team }))
+      );
+      this.onLeagueEnd?.({
+        ranking,
+        playerTeam: this.progressManager.selectedTeam,
+        modeKey: this.modeKey,
+        leagueLength: this.leagueLength
+      });
+    });
+
     this.scorePanel = new ScorePanel({ 
       scoreManager: this.scoreManager, 
       eventBus: this.eventBus 
@@ -86,22 +115,14 @@ class Game {
       eventBus: this.eventBus
     });
 
-    this.gameTime = 0;
-    this.lastMechanicTimeless = null;
     this.powerups = [];
     this.powerupTimer = GAME_CONFIG.meta.powerupSpawnIntervalMs / this.progressManager.getPowerupLuck();
-    this.timeSinceLastAction = 0;
-    this.lastTickSecond = -1;
-    this.paused = false;
-    this.eventBus.subscribe("kill", () => {
-      this.timeSinceLastAction = 0;
-    });
 
     if (this.progressManager.isTeamChosen()) {
       if (this.mode.kind === "level") {
-        this.#spawnMatch();
+        this.matchManager.startMatch();
       } else {
-        this.#restart();
+        this.matchManager.nextMatch();
       }
     }
 
@@ -109,8 +130,10 @@ class Game {
   }
 
   onTeamChanged() {
-    this.#restart();
+    this.matchManager.nextMatch();
   }
+
+
 
   destroy() {
     this.destroyed = true;
@@ -135,7 +158,7 @@ class Game {
   }
 
   #handlePointerDown(event) {
-    if (this.paused || !this.progressManager.isTeamChosen()) return;
+    if (this.matchManager.paused || !this.progressManager.isTeamChosen()) return;
     const canvas = this.canvasAdapter.getCanvas();
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
@@ -158,68 +181,7 @@ class Game {
     }
   }
 
-  #spawnMatch() {
-    this.options.setMechanic("timeless", true);
-    this.options.setMechanic("capture", this.mode.capture);
-    this.enemyGroupCount = Math.max(1, Math.floor(this.match / GAME_CONFIG.meta.enemiesPerLevel));
 
-    this.timeLeft = Math.min(
-      GAME_CONFIG.mechanics.matchTimeMaxMs,
-      GAME_CONFIG.mechanics.matchTimeBaseMs + this.match * GAME_CONFIG.mechanics.matchTimeGrowthMs
-    );
-
-    this.timeSinceLastAction = 0;
-    this.eventBus?.emit("game:match-start", { 
-      matchNumber: this.match, 
-      mode: this.mode, 
-      leagueLength: this.leagueLength,
-      timeLeft: this.timeLeft,
-      timeless: this.options.mechanics.timeless
-    });
-    this.enemies = EnemyFactory.spawnMatch(
-      this,
-      this.progressManager.selectedTeam,
-      this.progressManager,
-      this.enemyGroupCount
-    );
-    this.powerups = [];
-  }
-
-  #restart() {
-    this.eventBus?.emit("game:match-end", { 
-      match: this.match,
-      winners: this.lastWin,
-      modeKey: this.modeKey,
-      leagueLength: this.leagueLength
-    });
-    this.match++;
-
-    if (this.mode.isLeague && this.match > this.leagueLength) {
-      this.#endLeague();
-      return;
-    }
-
-    if (this.width < this.options.display.maxWidth) {
-      const { width, height } = this.canvasAdapter.resize(1.003 * this.match);
-      this.width = width;
-      this.height = height;
-    }
-
-    this.#spawnMatch();
-  }
-
-  #endLeague() {
-    this.paused = true;
-    const ranking = this.scoreManager.sortRanking(
-      Object.entries(this.scoreManager.teams).map(([name, team]) => ({ name, ...team }))
-    );
-    this.onLeagueEnd?.({
-      ranking,
-      playerTeam: this.progressManager.selectedTeam,
-      modeKey: this.modeKey,
-      leagueLength: this.leagueLength
-    });
-  }
 
   #captureEnemy(killed) {
     const captured = EnemyFactory.captureEnemy(killed, this, this.progressManager);
@@ -229,7 +191,7 @@ class Game {
   }
 
   update(deltaTime) {
-    if (this.paused || !this.progressManager.isTeamChosen()) return;
+    if (this.matchManager.paused || !this.progressManager.isTeamChosen()) return;
     const substeps = this.progressManager.getTimeCompression();
     const step = deltaTime / substeps;
     for (let i = 0; i < substeps; i++) {
@@ -238,64 +200,7 @@ class Game {
   }
 
   #updateStep(deltaTime) {
-    this.gameTime += deltaTime;
-    this.options.update();
-    const alive = this.enemies.filter(enemy => !enemy.dead).map(enemy => enemy.team);
-    const unique = [...new Set(alive)];
-
-    this.timeSinceLastAction += deltaTime;
-    const isStalled = this.timeSinceLastAction > GAME_CONFIG.meta.stallTimeoutMs && unique.length > 2;
-    const shouldBeTimeless = unique.length > 3 && !isStalled;
-
-    if (this.options.mechanics.timeless !== shouldBeTimeless) {
-      this.options.setMechanic("timeless", shouldBeTimeless);
-    }
-
-    if (isStalled) {
-      this.timeLeft = Math.min(this.timeLeft, GAME_CONFIG.meta.stallCountdownMs);
-    }
-
-    if (!this.options.mechanics.timeless) {
-      this.timeLeft -= deltaTime;
-    }
-
-    if (!this.options.mechanics.timeless) {
-      const currentSecond = Math.floor(this.timeLeft / 1000);
-      if (currentSecond !== this.lastTickSecond) {
-        this.lastTickSecond = currentSecond;
-        this.eventBus?.emit("tick", { timeLeft: this.timeLeft });
-      }
-    }
-
-    if (this.options.mechanics.timeless !== this.lastMechanicTimeless) {
-      this.lastMechanicTimeless = this.options.mechanics.timeless;
-      this.eventBus?.emit("game:mechanics-change", { timeless: this.options.mechanics.timeless });
-    }
-
-    if (unique.length === 1) {
-      this.scoreManager.addWin(unique[0], { match: this.match });
-      this.lastWin = unique[0];
-      this.#restart();
-    }
-
-    if (this.timeLeft <= 0) {
-      if (unique.length === 2) {
-        const team1 = this.enemies.filter(enemy => enemy.team === unique[0]);
-        const team2 = this.enemies.filter(enemy => enemy.team === unique[1]);
-        if (team1[0].aim.includes(team2[0].team)) {
-          this.scoreManager.addWin(unique[1], { match: this.match });
-          this.lastWin = unique[1];
-        }
-        if (team2[0].aim.includes(team1[0].team)) {
-          this.scoreManager.addWin(unique[0], { match: this.match });
-          this.lastWin = unique[0];
-        }
-      } else {
-      this.lastWin = "DRAW";
-      }
-
-      this.#restart();
-    }
+    this.matchManager.update(deltaTime, this.enemies);
 
     const dead = this.enemies.filter(enemy => enemy.dead);
     for (const killed of dead) {
@@ -432,13 +337,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("visibilitychange", () => {
     if (!game) return;
     if (document.hidden) {
-      game.paused = true;
+      game.matchManager.paused = true;
     } else {
       // Avoid the giant deltaTime of the resumption (rAF stops in the
       // background and Date.now() would accumulate all that time).
       game.clock.reset();
       if (!menu.isOpen()) {
-        game.paused = false;
+        game.matchManager.paused = false;
       }
     }
   });

@@ -15,7 +15,7 @@ test("power-ups: move without dying and per-team click applies them", () => {
   game.progressManager.reset();
   game.progressManager.selectTeam("rocks");
   game.progressManager.awardCredits = () => {};
-  game.match = 0;
+  game.matchManager.match = 0;
   game.onTeamChanged();
   game.powerupTimer = Infinity;
 

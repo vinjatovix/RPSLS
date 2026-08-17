@@ -16,7 +16,7 @@ export class PowerUp {
     this.emoji = config.emoji;
     this.color = config.color;
     this.lifetime = 10000;
-    this.bornAt = this.game.gameTime;
+    this.bornAt = this.game.matchManager.gameTime;
     this.pulse = 0;
     this.dead = false;
     this.velocityX = (Math.random() * 2 - 1) * 1.1;
@@ -35,7 +35,7 @@ export class PowerUp {
   }
 
   isExpired() {
-    return this.game.gameTime - this.bornAt > this.lifetime;
+    return this.game.matchManager.gameTime - this.bornAt > this.lifetime;
   }
 
   #updateAxis({ velocity, coordinate, dimensionName, dimension, frameFactor, margin }) {

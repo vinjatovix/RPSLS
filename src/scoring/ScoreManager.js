@@ -14,6 +14,14 @@ export class ScoreManager {
         ...clone(this.initialValues) 
       };
     }
+
+    if (this.eventBus) {
+      this.eventBus.subscribe("game:match-resolved", ({ winner, match }) => {
+        if (winner && winner !== "DRAW") {
+          this.addWin(winner, { match });
+        }
+      });
+    }
   }
 
   recordKill(killerTeam, victimTeam) {

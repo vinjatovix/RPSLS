@@ -42,7 +42,7 @@ test("click on power-up: collects per team, positives to MY team and traps to OT
   game.progressManager.awardCredits = v => {
     goldGot = v;
   };
-  game.match = 0;
+  game.matchManager.match = 0;
   game.onTeamChanged();
   game.powerupTimer = Infinity;
 
@@ -75,7 +75,7 @@ test("click on power-up: collects per team, positives to MY team and traps to OT
     });
     const rocksBefore = rocks.map(r => r.life);
     const othersBefore = game.enemies.filter(e => e.team !== "rocks").map(e => e.life);
-    const tlBefore = game.timeLeft;
+    const tlBefore = game.matchManager.timeLeft;
     goldGot = null;
 
     clickAt(p);
@@ -112,7 +112,7 @@ test("click on power-up: collects per team, positives to MY team and traps to OT
           );
           break;
         case "time":
-          assert.equal(game.timeLeft, tlBefore + config.amount, "time: must add time to the match");
+          assert.equal(game.matchManager.timeLeft, tlBefore + config.amount, "time: must add time to the match");
           break;
         case "gold":
           assert.ok(goldGot !== null && goldGot >= 5 && goldGot <= 25, `gold: must give 5-25 credits (got ${goldGot})`);

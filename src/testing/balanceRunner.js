@@ -124,7 +124,7 @@ export async function runCampaign({
   game.progressManager.reset();
   game.progressManager.selectTeam("rocks");
   game.progressManager.awardCredits = () => {};
-  game.match = 0;
+  game.matchManager.match = 0;
   game.onTeamChanged();
 
   if (!powerups) game.powerupTimer = Infinity;
@@ -176,13 +176,13 @@ export async function runCampaign({
   const matchDurations = [];
 
   try {
-    while (game.match <= maxLevel) {
-      const matchBefore = game.match;
+    while (game.matchManager.match <= maxLevel) {
+      const matchBefore = game.matchManager.match;
       const aliveBefore = [...new Set(game.enemies.filter(enemy => !enemy.dead).map(enemy => enemy.team))];
       game.update(deltaTime);
       steps += 1;
       simulatedMs += deltaTime;
-      if (game.match !== matchBefore) {
+      if (game.matchManager.match !== matchBefore) {
         matchDurations.push(simulatedMs - matchStartMs);
         matchStartMs = simulatedMs;
         let mode;
@@ -208,8 +208,8 @@ export async function runCampaign({
         if (onProgress) {
           const cancel = onProgress({
             steps,
-            match: game.match,
-            matchesLeft: Math.max(0, maxLevel - game.match + 1)
+            match: game.matchManager.match,
+            matchesLeft: Math.max(0, maxLevel - game.matchManager.match + 1)
           });
           if (cancel) {
             stats.truncated = true;
@@ -228,7 +228,7 @@ export async function runCampaign({
   }
 
   const totalWins = Object.values(stats.wins).reduce((a, b) => a + b, 0);
-  stats.matches = Math.max(0, game.match - 1);
+  stats.matches = Math.max(0, game.matchManager.match - 1);
   stats.draws = Math.max(0, stats.matches - totalWins);
   stats.steps = steps;
   stats.avgMatchMs = matchDurations.length

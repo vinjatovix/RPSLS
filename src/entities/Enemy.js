@@ -45,7 +45,7 @@ export class Enemy {
     this.regeneration = regeneration;
     this.modifiers = modifiers;
 
-    this.buffManager = new BuffManager(() => this.game.gameTime);
+    this.buffManager = new BuffManager(() => this.game.matchManager.gameTime);
     this.movementController = new MovementController({
       entity: this,
       stats,

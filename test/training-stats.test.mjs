@@ -21,7 +21,7 @@ function makeGame() {
   const game = new Game({ startLevel: 0 });
   game.progressManager.reset();
   game.progressManager.selectTeam("rocks");
-  game.match = 0;
+  game.matchManager.match = 0;
   game.onTeamChanged();
   game.powerupTimer = Infinity;
   return game;
