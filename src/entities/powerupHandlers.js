@@ -1,6 +1,6 @@
 export const GLOBAL_EFFECT_HANDLERS = {
   time: (powerup, team, config) => {
-    powerup.game.timeLeft += config.amount;
+    powerup.game.matchManager.timeLeft += config.amount;
   },
   gold: (powerup, team, config) => {
     if (team !== powerup.game.progressManager.selectedTeam) return;

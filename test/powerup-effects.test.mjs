@@ -19,7 +19,7 @@ function makeGame() {
   game.progressManager.reset();
   game.progressManager.selectTeam("rocks");
   game.progressManager.awardCredits = () => {};
-  game.match = 0;
+  game.matchManager.match = 0;
   game.onTeamChanged();
   game.powerupTimer = Infinity;
   return game;

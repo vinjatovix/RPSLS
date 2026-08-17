@@ -75,7 +75,7 @@ test('UI Event-Driven Architecture', async (t) => {
     eventBus.emit('game:match-start', { matchNumber: 6, mode: { isLeague: false } });
   
     assert.ok(document.body.textContent.includes('Match: 6'), 'Should show current match number');
-    assert.ok(document.body.textContent.includes('Last: rocks won'), 'Should show the last winner');
+    assert.ok(document.body.textContent.includes('Last winner: rocks'), 'Should show the last winner');
   });
 
   await t.test('MetaPanel reacts to progress:update event', async () => {

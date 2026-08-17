@@ -43,7 +43,7 @@ export class MenuController {
 
   #setPaused(paused) {
     const game = this.#game();
-    if (game) game.paused = paused;
+    if (game) game.matchManager.paused = paused;
   }
 
   #createElement(tag, className = "") {
@@ -108,11 +108,11 @@ export class MenuController {
     const game = this.#game();
     const pm   = game?.progressManager;
     const team = pm ? `${RACE_STATS[pm.selectedTeam].emoji} ${pm.selectedTeam}` : "—";
-    const leagueOver    = game?.mode?.isLeague && game.match > game.leagueLength;
+    const leagueOver    = game?.mode?.isLeague && game.matchManager.match > game.leagueLength;
     const canResumeReal = !!canResume && !leagueOver;
 
     const body = this.#div("menu-summary",
-      this.#span(`Match: ${game?.match ?? 0}`),
+      this.#span(`Match: ${game?.matchManager.match ?? 0}`),
       this.#span(`Team: ${team}`),
       this.#span(`Credits: ${pm?.credits ?? 0} 💰`)
     );

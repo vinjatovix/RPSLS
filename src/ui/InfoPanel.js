@@ -77,7 +77,7 @@ export class InfoPanel {
        this.roundInfoElement.innerHTML = !started
          ? `<p class="timer-active"><strong>👆 Choose your team to start</strong></p>`
          : `<p><strong class="timer-active">Match:</strong> ${match}${mode?.isLeague && leagueLength ? `/${leagueLength}` : ""}</p>
-           ${lastWin ? `<p><strong class="timer-active">Last:</strong> ${lastWin} won</p>` : ""}
+           ${lastWin ? `<p><strong class="timer-active">Last winner:</strong> ${lastWin}</p>` : ""}
            <p><strong class="timer-active">Credits:</strong> ${credits} 💰</p>
            ${!mechanics?.timeless ? `<p class="timer-active"><strong class="timer-active">Time:</strong> ${Math.round(timeLeft / 1000)}s</p>` : ""}`;
      }
