@@ -99,7 +99,7 @@ async function runSweep(runs, levels, deltaTime, percent) {
 
   const baseline = {};
   for (const team of TEAMS)
-    for (const [name, path] of SWEEP_STAT_PATHS)
+    for (const [, path] of SWEEP_STAT_PATHS)
       baseline[`${team}.${path}`] = readPath(RACE_STATS[team], path);
   const timerBase = GAME_CONFIG.mechanics.matchTimeBaseMs;
   const timerGrowth = GAME_CONFIG.mechanics.matchTimeGrowthMs;

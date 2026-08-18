@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 
 import "./dom-stub.js";
 import { Game } from "../src/index.js";
-import { GAME_CONFIG } from "../src/config/gameConfig.js";
 import { EntityManager } from "../src/entities/index.js";
 
 test("EntityManager: initial state and spawnMatch", () => {

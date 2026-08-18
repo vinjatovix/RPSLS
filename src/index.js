@@ -1,12 +1,12 @@
 import { GAME_CONFIG, GAME_MODES, RACE_STATS, UPGRADES, POWERUP_TYPES, LEAGUE_LENGTHS } from "./config/gameConfig.js";
 import { Clock, EventBus, deepFreeze } from "./core/index.js";
-import { CanvasAdapter, CollisionDetector } from "./canvas/index.js";
+import { CanvasAdapter } from "./canvas/index.js";
 import { InputHandler } from "./input/InputHandler.js";
 import { LocalStorageAdapter } from "./storage/LocalStorageAdapter.js";
 import { GameSettings } from "./options/GameSettings.js";
 import { ScoreManager } from "./scoring/ScoreManager.js";
 import { ProgressManager } from "./meta/ProgressManager.js";
-import { Enemy, EnemyFactory, PowerUp, MatchManager, EntityManager, RACE_CLASSES } from "./entities/index.js";
+import { Enemy, PowerUp, MatchManager, EntityManager, RACE_CLASSES } from "./entities/index.js";
 import { ParticleSystem } from "./particles/index.js";
 import { MenuController, InfoPanel, ScorePanel, DebugDrawer, MetaPanel } from "./ui/index.js";
 
