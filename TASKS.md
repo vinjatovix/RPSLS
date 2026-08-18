@@ -3,16 +3,25 @@
 ## 📋 Active Specifications
 *(Tasks currently being worked on. Each entry should link to its spec file in `docs/specs/`)*
 
-- (None currently active)
+- [ ] 🔥 **[IN PROGRESS]** Spec #12: Test Infrastructure & Strategy Improvements (`docs/specs/spec_12_test_infrastructure.md`)
 
 ## 🗄️ Backlog
 *(Planned technical improvements and features)*
 
 ### 🛠️ Refactoring (Technical Debt)
-- [ ] **[TODO]** Spec #2: Collision System Extraction
-- [ ] **[TODO]** Spec #3: Entity Lifecycle Management (ECS Lite)
+- [ ] **[TODO]** Spec #3: Particle Object Pooling (`docs/specs/spec_03_particle_object_pooling.md`)
+- [ ] **[TODO]** Spec #4: Canvas Rendering Optimization (`docs/specs/spec_04_canvas_rendering_optimization.md`)
+- [ ] **[TODO]** Spec #5: UI DOM Updates Optimization (`docs/specs/spec_05_ui_dom_updates_optimization.md`)
+- [ ] **[TODO]** Spec #6: LocalStorage Progress Persistence (`docs/specs/spec_06_progress_persistence.md`)
+- [ ] **[TODO]** Spec #13: Canvas Cache & Particle Batching (`docs/specs/spec_13_canvas_cache_and_particle_batching.md`)
+- [ ] **[TODO]** Spec #16: Collision System Extraction (Pending Spec)
+- [ ] **[TODO]** Spec #17: Entity Lifecycle Management / ECS Lite (Pending Spec)
 
 ### ✨ New Features
+- [ ] **[TODO]** Spec #7: Threat Detection Radius Training (`docs/specs/spec_07_detect_threat_radius_training.md`)
+- [ ] **[TODO]** Spec #8: Achievement System (`docs/specs/spec_08_achievement_system.md`)
+- [ ] **[TODO]** Spec #9: Toroidal Arena Mode (`docs/specs/spec_09_toroidal_arena.md`)
+- [ ] **[TODO]** Spec #10: Post-Match Shop & Interstitial System (`docs/specs/spec_10_post_match_shop.md`)
 - [ ] **[TODO]** Feature: Advanced Particle Shaders
 - [ ] **[TODO]** Feature: Multi-layer Backgrounds
 
