@@ -11,6 +11,7 @@
 
 import { Game } from "../index.js";
 import { RACE_STATS } from "../config/gameConfig.js";
+import { Random } from "../core/index.js";
 
 export const TEAMS = Object.keys(RACE_STATS);
 export const BUCKET_SIZE = 25;
@@ -117,8 +118,9 @@ export async function runCampaign({
 } = {}) {
   installTestEnv();
 
-  const previousRandom = Math.random;
-  if (seed !== null) Math.random = mulberry32(seed);
+  if (seed !== null) {
+    Random.setSeed(seed);
+  }
 
   const game = new Game({ startLevel: 0, mode: capture ? "infinite-capture" : "infinite-death" });
   game.progressManager.reset();
@@ -224,7 +226,9 @@ export async function runCampaign({
       }
     }
   } finally {
-    if (seed !== null) Math.random = previousRandom;
+    if (seed !== null) {
+      Random.restore();
+    }
   }
 
   const totalWins = Object.values(stats.wins).reduce((a, b) => a + b, 0);

@@ -1,3 +1,5 @@
+import { Random } from "../core/index.js";
+
 export class CanvasAdapter {
   constructor({ canvasId = "canvas1", displayConfig }) {
     this.canvas = document.getElementById(canvasId);
@@ -57,8 +59,8 @@ export class CanvasAdapter {
 
   getRandomSpawnPoint() {
     const margin = this.canvas.width / 6;
-    const x = Math.random() * (this.canvas.width - margin * 2) + margin;
-    const y = Math.random() * (this.canvas.height - margin * 2) + margin;
+    const x = Random.next() * (this.canvas.width - margin * 2) + margin;
+    const y = Random.next() * (this.canvas.height - margin * 2) + margin;
     return { x, y };
   }
 

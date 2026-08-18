@@ -25,6 +25,7 @@ export class EntityManager {
     );
     this.powerups = [];
     this.particles.particles = [];
+    this.#syncSpatialGrid();
   }
 
   update(deltaTime) {
@@ -41,10 +42,17 @@ export class EntityManager {
       this.particles.collision(killed.x, killed.y);
     }
     this.enemies = this.enemies.filter(enemy => !enemy.dead);
+
+    this.#syncSpatialGrid();
+
     this.#updatePowerups(deltaTime);
-    for (const enemy of this.enemies) {
-      enemy.update(deltaTime, this.enemies);
-    }
+    this.#executeAIPhase(deltaTime);
+    this.#executeMovementPhase(deltaTime);
+
+    this.#syncSpatialGrid();
+
+    this.#executeCollisionPhase();
+
     this.particles.update(deltaTime);
   }
 
@@ -61,7 +69,20 @@ export class EntityManager {
     for (const powerup of this.powerups) {
       powerup.update(deltaTime);
       if (powerup.dead) continue;
-      for (const enemy of this.enemies) {
+
+      let candidates;
+      const useGrid = this.game.spatialGrid && this.enemies.length > 0;
+      if (useGrid) {
+        candidates = this.game.spatialGrid.query(
+          powerup.x + powerup.width / 2,
+          powerup.y + powerup.height / 2,
+          Math.max(powerup.width, powerup.height) * 1.5
+        );
+      } else {
+        candidates = this.enemies;
+      }
+
+      for (const enemy of candidates) {
         if (!enemy.dead && CollisionDetector.checkOverlap(powerup, enemy)) {
           powerup.applyTo(enemy);
           break;
@@ -99,5 +120,33 @@ export class EntityManager {
 
   setPowerups(val) {
     this.powerups = val;
+  }
+
+  #syncSpatialGrid() {
+    this.game.spatialGrid.clear();
+    this.game.activeTeams.clear();
+
+    for (const enemy of this.enemies) {
+      this.game.spatialGrid.insert(enemy);
+      this.game.activeTeams.add(enemy.team);
+    }
+  }
+
+  #executeAIPhase(deltaTime) {
+    for (const enemy of this.enemies) {
+      enemy.preUpdate(deltaTime, this.enemies);
+    }
+  }
+
+  #executeMovementPhase(deltaTime) {
+    for (const enemy of this.enemies) {
+      enemy.move(deltaTime);
+    }
+  }
+
+  #executeCollisionPhase() {
+    for (const enemy of this.enemies) {
+      enemy.postUpdate(this.enemies);
+    }
   }
 }

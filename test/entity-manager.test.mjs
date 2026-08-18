@@ -2,49 +2,37 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import "./dom-stub.js";
-import { Game } from "../src/index.js";
 import { EntityManager } from "../src/entities/index.js";
+import { GameScenario } from "./GameScenario.mjs";
 
 test("EntityManager: initial state and spawnMatch", () => {
-  const game = new Game({ startLevel: 0 });
-  game.progressManager.reset();
-  game.progressManager.selectTeam("rocks");
-  const manager = game.entityManager;
+  const scenario = new GameScenario().withPlayerTeam("rocks");
+  const manager = scenario.entityManager;
 
-  assert.ok(manager instanceof EntityManager, "entityManager should be instantiated");
-  assert.ok(Array.isArray(manager.getEnemies()), "enemies should be an array");
-  assert.ok(Array.isArray(manager.getPowerups()), "powerups should be an array");
+  assert.ok(manager instanceof EntityManager);
+  assert.ok(Array.isArray(scenario.enemies));
+  assert.ok(Array.isArray(scenario.powerups));
 
-  // Reset to spawnMatch
   manager.spawnMatch(2);
-  const enemies = manager.getEnemies();
-  // 5 races * 2 count = 10 enemies
-  assert.equal(enemies.length, 10, "Should spawn 10 enemies (5 races * group count 2)");
-  assert.equal(manager.getPowerups().length, 0, "Powerups should be empty on spawnMatch");
 
-  game.destroy();
+  assert.equal(scenario.enemies.length, 10);
+  assert.equal(scenario.powerups.length, 0);
+
+  scenario.destroy();
 });
 
 test("EntityManager: updates and prunes dead entities", () => {
-  const game = new Game({ startLevel: 0 });
-  game.progressManager.reset();
-  game.progressManager.selectTeam("rocks");
-  const manager = game.entityManager;
+  const scenario = new GameScenario()
+    .withPlayerTeam("rocks")
+    .withSpawnedMatch(1);
 
-  manager.spawnMatch(1);
-  const initialCount = manager.getEnemies().length;
-  assert.ok(initialCount > 0, "Should have spawned enemies");
+  const initialCount = scenario.enemies.length;
+  assert.ok(initialCount > 0);
 
-  // Force one enemy to be dead
-  const enemies = manager.getEnemies();
-  enemies[0].dead = true;
+  scenario.withFirstEnemyMarkedDead().updateEntities(16);
 
-  // Run update to prune dead
-  manager.update(16);
+  assert.equal(scenario.enemies.length, initialCount - 1);
 
-  assert.equal(manager.getEnemies().length, initialCount - 1, "Dead enemy should be pruned during update");
-
-  // Test powerup pruning
   const mockPowerup = {
     x: 100,
     y: 100,
@@ -54,42 +42,83 @@ test("EntityManager: updates and prunes dead entities", () => {
     update: () => {},
     draw: () => {}
   };
-  manager.getPowerups().push(mockPowerup);
-  assert.equal(manager.getPowerups().length, 1, "Should have 1 powerup");
+  scenario.withInjectedPowerup(mockPowerup);
+  assert.equal(scenario.powerups.length, 1);
 
-  // Mark powerup dead and update
   mockPowerup.dead = true;
-  manager.update(16);
-  assert.equal(manager.getPowerups().length, 0, "Dead powerup should be pruned during update");
+  scenario.updateEntities(16);
+  assert.equal(scenario.powerups.length, 0);
 
-  game.destroy();
+  scenario.destroy();
 });
 
 test("EntityManager: integration with game loop update", () => {
-  const game = new Game({ startLevel: 0 });
-  game.progressManager.reset();
-  game.progressManager.selectTeam("rocks");
+  const scenario = new GameScenario()
+    .withPlayerTeam("rocks")
+    .withSpawnedMatch(1);
 
-  const manager = game.entityManager;
-  manager.spawnMatch(1);
+  const initialPositions = scenario.enemies.map(e => ({ x: e.x, y: e.y }));
 
-  const initialPositions = manager.getEnemies().map(e => ({ x: e.x, y: e.y }));
+  scenario.updateGame(32);
 
-  // Run game loop update
-  game.update(32);
+  const currentPositions = scenario.enemies.map(e => ({ x: e.x, y: e.y }));
+  const anyMoved = initialPositions.some((pos, i) => pos.x !== currentPositions[i].x || pos.y !== currentPositions[i].y);
 
-  const currentPositions = manager.getEnemies().map(e => ({ x: e.x, y: e.y }));
+  assert.ok(anyMoved);
 
-  // Assert that at least some enemies moved or their positions were updated via the game loop
-  let anyMoved = false;
-  for (let i = 0; i < initialPositions.length; i++) {
-    if (initialPositions[i].x !== currentPositions[i].x || initialPositions[i].y !== currentPositions[i].y) {
-      anyMoved = true;
-      break;
-    }
+  scenario.destroy();
+});
+
+test("CombatSystem: prevents double-killing and dead entity collisions", () => {
+  const scenario = new GameScenario()
+    .withPlayerTeam("rocks")
+    .withSpawnedMatch(1);
+
+  const rock = scenario.enemies.find(e => e.team === "rocks");
+  const scissors = scenario.enemies.find(e => e.team === "scissors");
+  assert.ok(rock && scissors);
+
+  const initialKills = scenario.scoreManager.getTeam("rocks").kills;
+
+  rock.dead = false;
+  rock.life = 100;
+  scissors.dead = false;
+  scissors.life = 10;
+
+  rock.combatSystem.kill(scissors);
+  assert.equal(scissors.dead, true);
+  assert.equal(scenario.scoreManager.getTeam("rocks").kills, initialKills + 1);
+
+  rock.combatSystem.kill(scissors);
+  assert.equal(scenario.scoreManager.getTeam("rocks").kills, initialKills + 1);
+
+  rock.dead = true;
+  const paper = scenario.enemies.find(e => e.team === "papers");
+  if (paper) {
+    paper.dead = false;
+    paper.life = 100;
+    const initialPaperKills = scenario.scoreManager.getTeam("rocks").kills;
+    rock.combatSystem.kill(paper);
+    assert.equal(paper.dead, false);
+    assert.equal(scenario.scoreManager.getTeam("rocks").kills, initialPaperKills);
   }
 
-  assert.ok(anyMoved, "Game loop update should successfully update entity positions through EntityManager");
+  scenario.destroy();
+});
 
-  game.destroy();
+test("EntityManager: activeTeams tracking state-synchronization", () => {
+  const scenario = new GameScenario()
+    .withPlayerTeam("rocks")
+    .withSpawnedMatch(1);
+
+  assert.equal(scenario.activeTeams.size, 5);
+  assert.ok(scenario.activeTeams.has("rocks"));
+  assert.ok(scenario.activeTeams.has("papers"));
+
+  scenario.withEnemyMarkedDead("papers").updateEntities(16);
+
+  assert.equal(scenario.activeTeams.size, 4);
+  assert.ok(!scenario.activeTeams.has("papers"));
+
+  scenario.destroy();
 });
