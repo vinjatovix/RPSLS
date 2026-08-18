@@ -1,14 +1,9 @@
-/**
- * powerup-check.test.mjs - Verifies that power-ups move and that
- * the click (per-team application) collects them.
- */
-
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import "./dom-stub.js";
 import { Game } from "../src/index.js";
-import { PowerUp } from "../src/entities/PowerUp.js";
+import { PowerUp } from "../src/entities/index.js";
 
 test("power-ups: move without dying and per-team click applies them", () => {
   const game = new Game({ startLevel: 0 });

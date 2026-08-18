@@ -1,17 +1,9 @@
-/**
- * powerup-effects.test.mjs - Verifies the power-up effects:
- * heal to full, zap to half, armor nullifies, damage x2, speed x2,
- * turn x2, slow x0.6, freeze stops, haste x2 accel, regen heals,
- * vampire heals on attack, confusion disorients, gold 5-25 credits
- * and the configured durations.
- */
-
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import "./dom-stub.js";
 import { Game } from "../src/index.js";
-import { PowerUp } from "../src/entities/PowerUp.js";
+import { PowerUp } from "../src/entities/index.js";
 import { POWERUP_TYPES } from "../src/config/gameConfig.js";
 
 function makeGame() {

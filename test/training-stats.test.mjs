@@ -1,21 +1,10 @@
-/**
- * training-stats.test.mjs - Verifies the added training stats:
- *   - UPGRADES includes regeneration/armor/vampire/deceleration (per race) and
- *     powerupDuration/powerupLimit/collectRadius (global)
- *   - buyUpgrade/getRaceModifiers of the new stats
- *   - Enemy: regeneration heals per second, armor reduces damage, vampire heals
- *     on damage, deceleration increases braking (acceleration no longer changes it)
- *   - Power-up spawn: base interval 4500ms
- *   - Credits: 2 per kill by the player's team
- */
-
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import "./dom-stub.js";
 import { Game } from "../src/index.js";
 import { UPGRADES } from "../src/config/gameConfig.js";
-import { Enemy } from "../src/entities/Enemy.js";
+import { Enemy } from "../src/entities/index.js";
 
 function makeGame() {
   const game = new Game({ startLevel: 0 });

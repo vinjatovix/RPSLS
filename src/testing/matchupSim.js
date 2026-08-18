@@ -11,7 +11,7 @@
  *   formatMatchupReport(result);
  */
 
-import { RACE_CLASSES } from "../entities/races.js";
+import { RACE_CLASSES } from "../entities/index.js";
 import { RACE_STATS } from "../config/gameConfig.js";
 
 export const TEAMS = Object.keys(RACE_STATS);

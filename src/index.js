@@ -1,26 +1,14 @@
 import { GAME_CONFIG, GAME_MODES, RACE_STATS, UPGRADES, POWERUP_TYPES, LEAGUE_LENGTHS } from "./config/gameConfig.js";
-import { Clock } from "./core/Clock.js";
-import { EventBus } from "./core/EventBus.js";
-import { deepFreeze } from "./core/deepFreeze.js";
-import { CanvasAdapter } from "./canvas/CanvasAdapter.js";
-import { CollisionDetector } from "./canvas/geometry/CollisionDetector.js";
+import { Clock, EventBus, deepFreeze } from "./core/index.js";
+import { CanvasAdapter, CollisionDetector } from "./canvas/index.js";
 import { InputHandler } from "./input/InputHandler.js";
 import { LocalStorageAdapter } from "./storage/LocalStorageAdapter.js";
 import { GameSettings } from "./options/GameSettings.js";
 import { ScoreManager } from "./scoring/ScoreManager.js";
 import { ProgressManager } from "./meta/ProgressManager.js";
-import { Enemy } from "./entities/Enemy.js";
-import { RACE_CLASSES } from "./entities/races.js";
-import { EnemyFactory } from "./entities/EnemyFactory.js";
-import { PowerUp } from "./entities/PowerUp.js";
-import { ParticleSystem } from "./particles/ParticleSystem.js";
-import { MenuController } from "./ui/MenuController.js";
-import { InfoPanel } from "./ui/InfoPanel.js";
-import { ScorePanel } from "./ui/ScorePanel.js";
-import { DebugDrawer } from "./ui/DebugDrawer.js";
-import { MetaPanel } from "./ui/MetaPanel.js";
-import { MatchManager } from "./entities/MatchManager.js";
-import { EntityManager } from "./entities/EntityManager.js";
+import { Enemy, EnemyFactory, PowerUp, MatchManager, EntityManager, RACE_CLASSES } from "./entities/index.js";
+import { ParticleSystem } from "./particles/index.js";
+import { MenuController, InfoPanel, ScorePanel, DebugDrawer, MetaPanel } from "./ui/index.js";
 
 class Game {
   constructor({ startLevel = 0, mode = "infinite-death", leagueLength = 50, team = null } = {}) {

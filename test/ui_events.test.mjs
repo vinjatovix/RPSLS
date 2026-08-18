@@ -1,9 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { EventBus } from '../src/core/EventBus.js';
-import { InfoPanel } from '../src/ui/InfoPanel.js';
-import { MetaPanel } from '../src/ui/MetaPanel.js';
-import { ScorePanel } from '../src/ui/ScorePanel.js';
+import { EventBus } from '../src/core/index.js';
+import { InfoPanel, MetaPanel, ScorePanel } from '../src/ui/index.js';
 import { JSDOM } from 'jsdom';
 
 function createTestEnvironment() {

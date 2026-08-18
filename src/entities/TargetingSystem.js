@@ -1,5 +1,5 @@
 import { GAME_CONFIG, RACE_STATS } from "../config/gameConfig.js";
-import { pickEscapePoint } from "../canvas/geometry/EscapeSolver.js";
+import { pickEscapePoint } from "../canvas/index.js";
 
 const PREDATORS = {};
 for (const team of Object.keys(RACE_STATS)) {

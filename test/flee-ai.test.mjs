@@ -1,10 +1,3 @@
-/**
- * flee-ai.test.mjs - Verifies the flee direction is space-aware.
- * Deterministic scenarios (explicit positions/angles) using the same
- * fake-game pattern as matchupSim: the prey has no prey to hunt, so
- * #setTarget triggers #flee against the predator.
- */
-
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -12,16 +5,12 @@ import {
   pickEscapePoint,
   clearanceToBoundary,
   CLEARANCE_SATURATE
-} from "../src/canvas/geometry/EscapeSolver.js";
-import { RACE_CLASSES } from "../src/entities/races.js";
+} from "../src/canvas/index.js";
+import { RACE_CLASSES } from "../src/entities/index.js";
 
 const ARENA = { width: 640, height: 384 };
 const MARGIN = 30;
 
-/**
- * Minimal fake game that satisfies what Enemy uses in update().
- * Same pattern as src/testing/matchupSim.js.
- */
 function makeFakeGame(arena) {
   const scale = arena.width / 5120;
   return {
