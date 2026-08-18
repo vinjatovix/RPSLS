@@ -76,9 +76,13 @@ To maintain exceptional engineering standards, all major features, performance o
 
 - **Spec #1:** Event-Driven UI Decoupling (Implemented)
 - **Spec #2:** Spatial Partitioning for $O(N^2)$ Collision Mitigation (Implemented)
+- **Spec #14:** EntityManager Extraction (Implemented)
+- **Spec #15:** MatchManager Extraction (Implemented)
 - **Spec #3:** Particle Object Pooling to reduce GC pressure (Planned)
-- **Spec #12:** Unit Test Infrastructure & Coverage Expansion (In Progress)
+- **Spec #12:** Unit Test Infrastructure & Coverage Expansion (Planned)
 - **Spec #13:** Canvas Rendering Optimization: Caching & Batching (Planned)
+
+*(See `TASKS.md` for the complete backlog including Toroidal Arena, Achievements, and pending system extractions)*
 
 ---
 
