@@ -37,7 +37,7 @@ test('UI Event-Driven Architecture', async (t) => {
       eventBus,
       getRanking: () => []
     };
-    const panel = new InfoPanel({ 
+    new InfoPanel({ 
       scoreManager: scoreManagerMock, 
       progressManager: mockProgress, 
       eventBus 
@@ -62,7 +62,7 @@ test('UI Event-Driven Architecture', async (t) => {
       eventBus,
       getRanking: () => []
     };
-    const panel = new InfoPanel({ 
+    new InfoPanel({ 
       scoreManager: scoreManagerMock, 
       progressManager: mockProgress, 
       eventBus 
@@ -89,7 +89,7 @@ test('UI Event-Driven Architecture', async (t) => {
       eventBus: eventBus
     };
   
-    const panel = new MetaPanel({ progressManager: mockProgress, eventBus });
+    new MetaPanel({ progressManager: mockProgress, eventBus });
   
     mockProgress.credits = 100;
     eventBus.emit('progress:update', { credits: 100 });
@@ -166,7 +166,7 @@ test('UI Event-Driven Architecture', async (t) => {
         ];
       }
     };
-    const panel = new ScorePanel({ 
+    new ScorePanel({ 
       scoreManager: scoreManagerMock, 
       eventBus 
     });
@@ -192,7 +192,7 @@ test('UI Event-Driven Architecture', async (t) => {
       eventBus,
       getRanking: () => []
     };
-    const panel = new InfoPanel({ 
+    new InfoPanel({ 
       scoreManager: scoreManagerMock, 
       progressManager: mockProgress, 
       eventBus 
@@ -218,7 +218,7 @@ test('UI Event-Driven Architecture', async (t) => {
       eventBus,
       getRanking: () => []
     };
-    const panel = new InfoPanel({ 
+    new InfoPanel({ 
       scoreManager: scoreManagerMock, 
       progressManager: mockProgress, 
       eventBus 
@@ -245,7 +245,7 @@ test('UI Event-Driven Architecture', async (t) => {
       eventBus,
       getRanking: () => []
     };
-    const panel = new InfoPanel({ 
+    new InfoPanel({ 
       scoreManager: scoreManagerMock, 
       progressManager: mockProgress, 
       eventBus 
