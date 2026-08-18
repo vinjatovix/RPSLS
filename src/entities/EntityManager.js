@@ -1,8 +1,8 @@
 import { GAME_CONFIG } from "../config/gameConfig.js";
 import { EnemyFactory } from "./EnemyFactory.js";
 import { PowerUp } from "./PowerUp.js";
-import { ParticleSystem } from "../particles/ParticleSystem.js";
-import { CollisionDetector } from "../canvas/geometry/CollisionDetector.js";
+import { ParticleSystem } from "../particles/index.js";
+import { CollisionDetector } from "../canvas/index.js";
 
 export class EntityManager {
   constructor({ game, eventBus, progressManager }) {
@@ -16,7 +16,6 @@ export class EntityManager {
     this.powerupTimer = GAME_CONFIG.meta.powerupSpawnIntervalMs / this.progressManager.getPowerupLuck();
   }
 
-  // Spawn initial match enemies and reset powerups/particles
   spawnMatch(enemyGroupCount) {
     this.enemies = EnemyFactory.spawnMatch(
       this.game,
@@ -28,7 +27,6 @@ export class EntityManager {
     this.particles.particles = [];
   }
 
-  // Update all active entities, handle collisions, spawn powerups, prune dead
   update(deltaTime) {
     this.game.matchManager.update(deltaTime, this.enemies);
 
@@ -73,7 +71,6 @@ export class EntityManager {
     this.powerups = this.powerups.filter(powerup => !powerup.dead);
   }
 
-  // Draw all active entities (enemies, powerups, particles)
   draw() {
     this.particles.draw();
     for (const powerup of this.powerups) {
@@ -84,12 +81,10 @@ export class EntityManager {
     }
   }
 
-  // Add a newly captured enemy to the collection
   addCapturedEnemy(enemy) {
     this.enemies.push(enemy);
   }
   
-  // Return list of all active enemies
   getEnemies() {
     return this.enemies;
   }
@@ -98,7 +93,6 @@ export class EntityManager {
     this.enemies = val;
   }
   
-  // Return list of all active powerups
   getPowerups() {
     return this.powerups;
   }

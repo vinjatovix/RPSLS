@@ -1,15 +1,7 @@
-/**
- * config-freeze.test.mjs - Verifies deepFreeze (the anti-hack barrier):
- *   - deeply freezes nested objects (including already shallow-frozen ones)
- *   - is idempotent and tolerates cycles
- *   - real configs remain MUTABLE in Node (the balance harness calibrates
- *     them); only the browser bootstrap freezes them
- */
-
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { deepFreeze } from "../src/core/deepFreeze.js";
+import { deepFreeze } from "../src/core/index.js";
 import { RACE_STATS } from "../src/config/gameConfig.js";
 
 test("deepFreeze freezes deeply", () => {

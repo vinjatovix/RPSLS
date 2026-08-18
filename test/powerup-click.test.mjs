@@ -1,9 +1,3 @@
-/**
- * powerup-click.test.mjs - Verifies the click flow: pointerdown on a
- * power-up collects it; positives affect the player's team and traps
- * (negatives) affect all other teams. Covers ALL types.
- */
-
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -31,14 +25,14 @@ const prevGetElementById = document.getElementById;
 document.getElementById = id => (id === "canvas1" ? canvas : prevGetElementById(id));
 
 const { Game } = await import("../src/index.js");
-const { PowerUp } = await import("../src/entities/PowerUp.js");
+const { PowerUp } = await import("../src/entities/index.js");
 const { POWERUP_TYPES } = await import("../src/config/gameConfig.js");
 
 test("click on power-up: collects per team, positives to MY team and traps to OTHERS", () => {
   const game = new Game({ startLevel: 0 });
   game.progressManager.reset();
   game.progressManager.selectTeam("rocks");
-  let goldGot = null;
+  let goldGot;
   game.progressManager.awardCredits = v => {
     goldGot = v;
   };

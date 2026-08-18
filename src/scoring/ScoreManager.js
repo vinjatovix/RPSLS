@@ -1,5 +1,5 @@
 import { RACE_STATS } from "../config/gameConfig.js";
-import { clone } from "../core/clone.js";
+import { clone } from "../core/index.js";
 
 export class ScoreManager {
   constructor({ eventBus = null } = {}) {

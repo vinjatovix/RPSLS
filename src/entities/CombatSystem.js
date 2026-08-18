@@ -1,4 +1,4 @@
-import { CollisionDetector } from "../canvas/geometry/CollisionDetector.js";
+import { CollisionDetector } from "../canvas/index.js";
 
 export class CombatSystem {
   constructor({ entity, baseDamage, damageMultiplier, armor, vampire, buffManager, scoreManager }) {

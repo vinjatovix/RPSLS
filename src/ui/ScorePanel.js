@@ -1,8 +1,4 @@
 export class ScorePanel {
-  #state = {
-    ranking: []
-  };
-
   constructor({ scoreManager, eventBus }) {
     this.scoreManager = scoreManager;
     this.eventBus = eventBus;

@@ -1,5 +1,5 @@
 import { RACE_STATS } from "../config/gameConfig.js";
-import { CollisionDetector } from "../canvas/geometry/CollisionDetector.js";
+import { CollisionDetector } from "../canvas/index.js";
 import { BuffManager } from "./BuffManager.js";
 import { MovementController } from "./MovementController.js";
 import { TargetingSystem } from "./TargetingSystem.js";
@@ -94,7 +94,6 @@ export class Enemy {
     return this.buffManager.getMultiplier("turn");
   }
 
-  // Compatibilidad tests - métodos en vez getters (deepFreeze safe)
   get speed() {
     return this.movementController?.speed;
   }
