@@ -123,10 +123,10 @@ test("Anti-stall: breaks timeless mode and triggers countdown after stallTimeout
   game.onTeamChanged();
 
   game.enemies = [
-    { team: "rocks", dead: false, update() {}, draw() {} },
-    { team: "papers", dead: false, update() {}, draw() {} },
-    { team: "scissors", dead: false, update() {}, draw() {} },
-    { team: "lizards", dead: false, update() {}, draw() {} }
+    { team: "rocks", dead: false, preUpdate() {}, move() {}, postUpdate() {}, draw() {} },
+    { team: "papers", dead: false, preUpdate() {}, move() {}, postUpdate() {}, draw() {} },
+    { team: "scissors", dead: false, preUpdate() {}, move() {}, postUpdate() {}, draw() {} },
+    { team: "lizards", dead: false, preUpdate() {}, move() {}, postUpdate() {}, draw() {} }
   ];
 
   game.update(100);

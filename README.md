@@ -47,6 +47,7 @@ The game operates on an evolutionary "predator-prey" loop.
 - **Progression:** An upgrade system that allows players to invest credits into permanent stat boosts (Health, Damage, Speed, etc.) and "meta" upgrades (Power-up luck, Simulation compression).
 - **Dynamic Environment:** A continuous stream of `POWERUP_TYPES` (Heal, Speed, Armor, etc.) and `TRAP` power-ups (Slow, Confusion, Freeze) that create unpredictable combat encounters.
 - **Anti-Stall & Timeless Logic:** The engine dynamically transitions to a "timeless" mode when 4+ teams are alive, suspending the timer. To prevent endless deadlocks/orbits, a **30-second anti-stall countdown** automatically kicks in if no kills occur, forcing a temporary countdown of 10 seconds to keep the simulation flowing.
+- **Diagnostics & Debug Overlay:** Pressing the `D` key at runtime toggles an advanced engineering debug HUD. This overlay visualizes the active `SpatialGrid` boundary boxes, renders real-time entity occupancy counts inside each cell, draws the targeting query range circle, and renders cyan vector-lines connecting entities to their candidate targets, showcasing the spatial partitioning engine in real-time.
 
 ---
 
@@ -55,10 +56,12 @@ The game operates on an evolutionary "predator-prey" loop.
 The project is built as a **headless-capable, pure ESM engine**. It requires no transpilation and runs directly in modern browsers and Node.js environments.
 
 - **Engine Core (`src/index.js`):** The main loop and game bootstrap.
-- **Deterministic Simulation:** Uses seeded PRNG (`mulberry3    32`) to ensure that any simulation or test is 100% reproducible.
+- **Deterministic Simulation:** Employs a mathematically exact, 32-bit bitwise-coerced PRNG (`mulberry32`) guaranteeing cross-platform reproducible simulation paths over millions of iterations without Float64 precision drift. Cosmetics/visuals (such as particles) are stochastically isolated from the core physics simulation.
+- **Phase-Separated Execution Pipeline:** Structured updates into distinct, strictly synchronized temporal phases (AI/Targeting $\to$ Movement $\to$ Spatial Grid Sync $\to$ Collision Resolution) to eliminate temporal frame-aliasing and ensure spatial consistency.
 - **Headless Capability:** The entire game logic is decoupled from the DOM, allowing the `src/testing/` harness to run high-speed simulations in a terminal.
 - **Event-Driven UI Decoupling:** Employs a centralized `EventBus` to emit and subscribe to key state changes, fully decoupling core game mechanics from the DOM layout and UI components (like `ScorePanel`, `InfoPanel`, and `MetaPanel`).
 - **Data Immutability:** Core configurations (`gameConfig.js`) are deeply frozen to prevent runtime side-effects.
+- **Spatial Partitioning (Optimization):** Utilizes a dynamic 2D Spatial Hash Grid with 32-bit packed integer key-hashing (avoiding string allocations), true zero-allocation array pooling, and entity query-result recycling. This reduces collision and targeting mathematical complexity from $O(N^2)$ to $O(N)$ with near-zero Garbage Collection overhead, ensuring a stable 60 FPS.
 
 ### Tech Stack
 - **Runtime:** Node.js $\ge$ 22 (using native `node:test`)
@@ -72,7 +75,7 @@ The project is built as a **headless-capable, pure ESM engine**. It requires no 
 To maintain exceptional engineering standards, all major features, performance optimizations, and structural refactorings are designed through structured specifications before implementation. You can find them under `docs/specs/`:
 
 - **Spec #1:** Event-Driven UI Decoupling (Implemented)
-- **Spec #2:** Spatial Partitioning for $O(N^2)$ Collision Mitigation (Planned)
+- **Spec #2:** Spatial Partitioning for $O(N^2)$ Collision Mitigation (Implemented)
 - **Spec #3:** Particle Object Pooling to reduce GC pressure (Planned)
 - **Spec #12:** Unit Test Infrastructure & Coverage Expansion (In Progress)
 - **Spec #13:** Canvas Rendering Optimization: Caching & Batching (Planned)

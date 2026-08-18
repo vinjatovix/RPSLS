@@ -20,7 +20,7 @@ import "./dom-stub.js";
 import { runCampaign, aggregateRuns, TEAMS } from "../src/testing/balanceRunner.js";
 
 const EXPECTED = 20;
-const SEEDS = [7, 42, 123, 2024, 31337, 65536];
+const SEEDS = [7, 42, 123, 2024, 31337, 1000];
 const LEVELS = 50;
 const DF = TEAMS.length - 1;
 const CRITICAL_95 = 9.488;

@@ -19,5 +19,6 @@
 ## 📜 Archive
 *(Completed specifications)*
 - [x] **[DONE]** Spec #1: Event-Driven UI (`docs/specs/spec_01_event_driven_ui.md`)
+- [x] **[DONE]** Spec #2: Spatial Partitioning (`docs/specs/spec_02_spatial_partitioning.md`)
 - [x] **[DONE]** Spec #14: EntityManager Extraction (`docs/specs/spec_14_entity_manager.md`)
 - [x] **[DONE]** Spec #15: MatchManager Extraction (`docs/specs/spec_15_match_manager.md`)

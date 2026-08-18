@@ -1,6 +1,6 @@
 import { GAME_CONFIG, GAME_MODES, RACE_STATS, UPGRADES, POWERUP_TYPES, LEAGUE_LENGTHS } from "./config/gameConfig.js";
 import { Clock, EventBus, deepFreeze } from "./core/index.js";
-import { CanvasAdapter } from "./canvas/index.js";
+import { CanvasAdapter, SpatialGrid } from "./canvas/index.js";
 import { InputHandler } from "./input/InputHandler.js";
 import { LocalStorageAdapter } from "./storage/LocalStorageAdapter.js";
 import { GameSettings } from "./options/GameSettings.js";
@@ -36,8 +36,10 @@ class Game {
 
     this.clock = new Clock();
     this.eventBus = new EventBus();
+    this.activeTeams = new Set();
 
     this.debugDrawer = new DebugDrawer({
+      game: this,
       canvasAdapter: this.canvasAdapter,
       clock: this.clock,
       options: this.options
@@ -52,6 +54,12 @@ class Game {
     if (team && RACE_STATS[team]) {
       this.progressManager.selectTeam(team);
     }
+
+    this.spatialGrid = new SpatialGrid(100, 100, {
+      isToroidal: this.options?.mechanics?.isToroidal || false,
+      width: this.width,
+      height: this.height
+    });
 
     this.entityManager = new EntityManager({
       game: this,

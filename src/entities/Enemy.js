@@ -1,3 +1,4 @@
+import { Random } from "../core/index.js";
 import { RACE_STATS } from "../config/gameConfig.js";
 import { CollisionDetector } from "../canvas/index.js";
 import { BuffManager } from "./BuffManager.js";
@@ -28,7 +29,7 @@ export class Enemy {
     const spawn = this.game.canvasAdapter.getRandomSpawnPoint();
     this.x = x || spawn.x;
     this.y = y || spawn.y;
-    this.angle = angle || Math.random() * 2 * Math.PI;
+    this.angle = angle || Random.next() * 2 * Math.PI;
 
     this.width = 20;
     this.height = 20;
@@ -126,7 +127,7 @@ export class Enemy {
     this.movementController.move(deltaTime);
   }
 
-  update(deltaTime, allEnemies) {
+  preUpdate(deltaTime, allEnemies) {
     const regenerationBuff = this.buffManager.getMultiplier("regeneration");
     const regeneration = regenerationBuff !== null ? regenerationBuff : this.regeneration;
     if (regeneration > 0) {
@@ -134,8 +135,16 @@ export class Enemy {
     }
     this.checkPosition();
     this.targetingSystem.setTarget(allEnemies);
-    this.move(deltaTime);
+  }
+
+  postUpdate(allEnemies) {
     this.combatSystem.checkCollision(allEnemies);
+  }
+
+  update(deltaTime, allEnemies) {
+    this.preUpdate(deltaTime, allEnemies);
+    this.move(deltaTime);
+    this.postUpdate(allEnemies);
   }
 
   draw() {

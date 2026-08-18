@@ -5,6 +5,7 @@ import "./dom-stub.js";
 import { Game } from "../src/index.js";
 import { PowerUp } from "../src/entities/index.js";
 import { POWERUP_TYPES } from "../src/config/gameConfig.js";
+import { Random } from "../src/core/index.js";
 
 function makeGame() {
   const game = new Game({ startLevel: 0 });
@@ -125,27 +126,26 @@ test("confusion: disorients without fleeing and keeps the aim in the canvas", ()
 
 test("gold: minimum 5 and maximum 25 credits based on Math.random", () => {
   const game = makeGame();
-  const realRandom = Math.random;
   try {
     let goldGot = null;
     game.progressManager.awardCredits = v => {
       goldGot = v;
     };
 
-    Math.random = () => 0;
+    Random.setMock(() => 0);
     const gold = new PowerUp({ game });
     gold.type = "gold";
     gold.applyToTeam("rocks");
     assert.equal(goldGot, 5, `gold minimum (got ${goldGot})`);
 
-    Math.random = () => 0.9999;
+    Random.setMock(() => 0.9999);
     const gold2 = new PowerUp({ game });
     gold2.type = "gold";
     goldGot = null;
     gold2.applyToTeam("rocks");
     assert.equal(goldGot, 25, `gold maximum (got ${goldGot})`);
   } finally {
-    Math.random = realRandom;
+    Random.restore();
   }
   game.destroy();
 });

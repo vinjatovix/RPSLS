@@ -1,3 +1,5 @@
+import { Random } from "../core/Random.js";
+
 export class Particle {
   constructor({ context, x, y, game }) {
     this.context = context;
@@ -5,12 +7,12 @@ export class Particle {
     this.y = y;
     this.game = game;
     this.dead = false;
-    this.velocityX = Math.random() * 0.5 - 0.25;
-    this.velocityY = Math.random() * 0.5 - 0.25;
+    this.velocityX = Random.cosmeticNext() * 0.5 - 0.25;
+    this.velocityY = Random.cosmeticNext() * 0.5 - 0.25;
     this.life = 1000;
     this.opacity = 1;
-    this.size = Math.random() * 5 + 5;
-    this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+    this.size = Random.cosmeticNext() * 5 + 5;
+    this.color = `hsl(${Random.cosmeticNext() * 360}, 100%, 50%)`;
   }
 
   update(deltaTime) {

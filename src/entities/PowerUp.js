@@ -1,3 +1,4 @@
+import { Random } from "../core/index.js";
 import { POWERUP_TYPES, GAME_CONFIG } from "../config/gameConfig.js";
 import { GLOBAL_EFFECT_HANDLERS, TARGET_EFFECT_HANDLERS } from "./powerupHandlers.js";
 
@@ -19,13 +20,13 @@ export class PowerUp {
     this.bornAt = this.game.matchManager.gameTime;
     this.pulse = 0;
     this.dead = false;
-    this.velocityX = (Math.random() * 2 - 1) * 1.1;
-    this.velocityY = (Math.random() * 2 - 1) * 1.1;
+    this.velocityX = (Random.next() * 2 - 1) * 1.1;
+    this.velocityY = (Random.next() * 2 - 1) * 1.1;
   }
 
   #pickType() {
     const total = Object.values(POWERUP_TYPES).reduce((sum, type) => sum + type.weight, 0);
-    let roll = Math.random() * total;
+    let roll = Random.next() * total;
     for (const [key, config] of Object.entries(POWERUP_TYPES)) {
       roll -= config.weight;
       if (roll <= 0) return key;
