@@ -20,6 +20,7 @@ import { ScorePanel } from "./ui/ScorePanel.js";
 import { DebugDrawer } from "./ui/DebugDrawer.js";
 import { MetaPanel } from "./ui/MetaPanel.js";
 import { MatchManager } from "./entities/MatchManager.js";
+import { EntityManager } from "./entities/EntityManager.js";
 
 class Game {
   constructor({ startLevel = 0, mode = "infinite-death", leagueLength = 50, team = null } = {}) {
@@ -64,6 +65,12 @@ class Game {
       this.progressManager.selectTeam(team);
     }
 
+    this.entityManager = new EntityManager({
+      game: this,
+      eventBus: this.eventBus,
+      progressManager: this.progressManager
+    });
+
     this.scoreManager = new ScoreManager({ eventBus: this.eventBus });
     this.matchManager = new MatchManager({
       game: this,
@@ -74,13 +81,7 @@ class Game {
 
     this.eventBus.subscribe("game:match-start", ({ matchNumber }) => {
       const enemyGroupCount = Math.max(1, Math.floor(matchNumber / GAME_CONFIG.meta.enemiesPerLevel));
-      this.enemies = EnemyFactory.spawnMatch(
-        this,
-        this.progressManager.selectedTeam,
-        this.progressManager,
-        enemyGroupCount
-      );
-      this.powerups = [];
+      this.entityManager.spawnMatch(enemyGroupCount);
     });
 
     this.eventBus.subscribe("game:league-ended", () => {
@@ -104,9 +105,7 @@ class Game {
       progressManager: this.progressManager, 
       eventBus: this.eventBus 
     });
-    this.enemies = [];
     this.lastWin = null;
-    this.particles = new ParticleSystem({ game: this });
     this.destroyed = false;
     this.animationFrameId = null;
     this.onLeagueEnd = null;
@@ -114,9 +113,6 @@ class Game {
       progressManager: this.progressManager,
       eventBus: this.eventBus
     });
-
-    this.powerups = [];
-    this.powerupTimer = GAME_CONFIG.meta.powerupSpawnIntervalMs / this.progressManager.getPowerupLuck();
 
     if (this.progressManager.isTeamChosen()) {
       if (this.mode.kind === "level") {
@@ -127,6 +123,46 @@ class Game {
     }
 
     this.#setupPointerEvents();
+  }
+
+  get enemies() {
+    return this.entityManager ? this.entityManager.getEnemies() : [];
+  }
+
+  set enemies(val) {
+    if (this.entityManager) {
+      this.entityManager.setEnemies(val);
+    }
+  }
+
+  get powerups() {
+    return this.entityManager ? this.entityManager.getPowerups() : [];
+  }
+
+  set powerups(val) {
+    if (this.entityManager) {
+      this.entityManager.setPowerups(val);
+    }
+  }
+
+  get particles() {
+    return this.entityManager ? this.entityManager.particles : null;
+  }
+
+  set particles(val) {
+    if (this.entityManager) {
+      this.entityManager.particles = val;
+    }
+  }
+
+  get powerupTimer() {
+    return this.entityManager ? this.entityManager.powerupTimer : 0;
+  }
+
+  set powerupTimer(val) {
+    if (this.entityManager) {
+      this.entityManager.powerupTimer = val;
+    }
   }
 
   onTeamChanged() {
@@ -183,70 +219,18 @@ class Game {
 
 
 
-  #captureEnemy(killed) {
-    const captured = EnemyFactory.captureEnemy(killed, this, this.progressManager);
-    if (captured) {
-      this.enemies.push(captured);
-    }
-  }
-
   update(deltaTime) {
     if (this.matchManager.paused || !this.progressManager.isTeamChosen()) return;
     const substeps = this.progressManager.getTimeCompression();
     const step = deltaTime / substeps;
     for (let i = 0; i < substeps; i++) {
-      this.#updateStep(step);
+      this.entityManager.update(step);
     }
-  }
-
-  #updateStep(deltaTime) {
-    this.matchManager.update(deltaTime, this.enemies);
-
-    const dead = this.enemies.filter(enemy => enemy.dead);
-    for (const killed of dead) {
-      this.options.mechanics.capture && this.#captureEnemy(killed);
-      this.particles.collision(killed.x, killed.y);
-    }
-    this.enemies = this.enemies.filter(enemy => !enemy.dead);
-    this.#updatePowerups(deltaTime);
-    for (const enemy of this.enemies) {
-      enemy.update(deltaTime, this.enemies);
-    }
-    this.particles.update(deltaTime);
-  }
-
-  #updatePowerups(deltaTime) {
-    this.powerupTimer -= deltaTime;
-    if (
-      this.powerupTimer <= 0 &&
-      this.powerups.length < GAME_CONFIG.meta.powerupMaxConcurrent + this.progressManager.getPowerupLimitBonus()
-    ) {
-      this.powerups.push(new PowerUp({ game: this }));
-      this.powerupTimer = GAME_CONFIG.meta.powerupSpawnIntervalMs / this.progressManager.getPowerupLuck();
-    }
-
-    for (const powerup of this.powerups) {
-      powerup.update(deltaTime);
-      if (powerup.dead) continue;
-      for (const enemy of this.enemies) {
-        if (!enemy.dead && CollisionDetector.checkOverlap(powerup, enemy)) {
-          powerup.applyTo(enemy);
-          break;
-        }
-      }
-    }
-    this.powerups = this.powerups.filter(powerup => !powerup.dead);
   }
 
   draw() {
-    this.particles.draw();
-    for (const powerup of this.powerups) {
-      powerup.draw();
-    }
+    this.entityManager.draw();
     this.debugDrawer.draw();
-    for (const enemy of this.enemies) {
-      enemy.draw();
-    }
   }
 
   run() {
@@ -273,6 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
   deepFreeze(LEAGUE_LENGTHS);
   for (const classes of [
     Game,
+    EntityManager,
     ScorePanel,
     InfoPanel,
     DebugDrawer,
