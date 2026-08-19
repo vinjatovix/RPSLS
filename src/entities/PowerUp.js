@@ -1,5 +1,4 @@
 import { Random } from "../core/index.js";
-import { POWERUP_TYPES, GAME_CONFIG } from "../config/gameConfig.js";
 import { GLOBAL_EFFECT_HANDLERS, TARGET_EFFECT_HANDLERS } from "./powerupHandlers.js";
 
 export class PowerUp {
@@ -7,7 +6,7 @@ export class PowerUp {
     this.game = game;
     this.context = this.game.canvasAdapter.getContext();
     this.type = this.#pickType();
-    const config = POWERUP_TYPES[this.type];
+    const config = this.game.powerupTypes[this.type];
     const spawn = this.game.canvasAdapter.getRandomSpawnPoint();
 
     this.x = spawn.x;
@@ -25,9 +24,9 @@ export class PowerUp {
   }
 
   #pickType() {
-    const total = Object.values(POWERUP_TYPES).reduce((sum, type) => sum + type.weight, 0);
+    const total = Object.values(this.game.powerupTypes).reduce((sum, type) => sum + type.weight, 0);
     let roll = Random.next() * total;
-    for (const [key, config] of Object.entries(POWERUP_TYPES)) {
+    for (const [key, config] of Object.entries(this.game.powerupTypes)) {
       roll -= config.weight;
       if (roll <= 0) return key;
     }
@@ -62,7 +61,7 @@ export class PowerUp {
 
     const frameFactor = deltaTime / 30;
     const { width, height } = this.game.canvasAdapter.getSize();
-    const margin = GAME_CONFIG.mechanics.ai.escape.margin;
+    const margin = this.game.config.mechanics.ai.escape.margin;
 
     const rx = this.#updateAxis({ velocity: this.velocityX, coordinate: this.x, dimensionName: 'width', dimension: width, frameFactor, margin });
     const ry = this.#updateAxis({ velocity: this.velocityY, coordinate: this.y, dimensionName: 'height', dimension: height, frameFactor, margin });
@@ -93,7 +92,7 @@ export class PowerUp {
   }
 
   applyForClick(team) {
-    if (POWERUP_TYPES[this.type].trap) {
+    if (this.game.powerupTypes[this.type].trap) {
       this.applyToOthers(team);
     } else {
       this.applyToTeam(team);
@@ -101,7 +100,7 @@ export class PowerUp {
   }
 
   #applyEffectToTeam(team) {
-    const config = POWERUP_TYPES[this.type];
+    const config = this.game.powerupTypes[this.type];
     const game = this.game;
 
     const global = GLOBAL_EFFECT_HANDLERS[this.type];
@@ -127,7 +126,7 @@ export class PowerUp {
 
   #consume() {
     this.dead = true;
-    const config = POWERUP_TYPES[this.type];
+    const config = this.game.powerupTypes[this.type];
     this.game.particles.powerUpBurst(this.x + this.width / 2, this.y + this.height / 2, config.color);
     this.game.particles.showFloatingText(
       this.x + this.width / 2,

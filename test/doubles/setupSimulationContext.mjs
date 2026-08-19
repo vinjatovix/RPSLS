@@ -6,7 +6,7 @@ export const TICK_MS = 16;
 
 export function setupSimulationContext(selectedTeam = "rocks") {
   const game = new FakeGame();
-  const progressManager = new ProgressManager({ eventBus: game.eventBus });
+  const progressManager = new ProgressManager({ eventBus: game.eventBus, raceStats: game.raceStats, upgrades: game.upgrades });
   progressManager.selectTeam(selectedTeam);
   game.progressManager = progressManager;
 

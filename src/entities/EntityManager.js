@@ -1,8 +1,7 @@
-import { GAME_CONFIG } from "../config/gameConfig.js";
+import { CollisionDetector } from "../canvas/index.js";
+import { ParticleSystem } from "../particles/index.js";
 import { EnemyFactory } from "./EnemyFactory.js";
 import { PowerUp } from "./PowerUp.js";
-import { ParticleSystem } from "../particles/index.js";
-import { CollisionDetector } from "../canvas/index.js";
 
 export class EntityManager {
   constructor({ game, eventBus, progressManager }) {
@@ -13,7 +12,7 @@ export class EntityManager {
     this.enemies = [];
     this.powerups = [];
     this.particles = new ParticleSystem({ game: this.game });
-    this.powerupTimer = GAME_CONFIG.meta.powerupSpawnIntervalMs / this.progressManager.getPowerupLuck();
+    this.powerupTimer = this.game.config.meta.powerupSpawnIntervalMs / this.progressManager.getPowerupLuck();
   }
 
   spawnMatch(enemyGroupCount) {
@@ -60,10 +59,10 @@ export class EntityManager {
     this.powerupTimer -= deltaTime;
     if (
       this.powerupTimer <= 0 &&
-      this.powerups.length < GAME_CONFIG.meta.powerupMaxConcurrent + this.progressManager.getPowerupLimitBonus()
+      this.powerups.length < this.game.config.meta.powerupMaxConcurrent + this.progressManager.getPowerupLimitBonus()
     ) {
       this.powerups.push(new PowerUp({ game: this.game }));
-      this.powerupTimer = GAME_CONFIG.meta.powerupSpawnIntervalMs / this.progressManager.getPowerupLuck();
+      this.powerupTimer = this.game.config.meta.powerupSpawnIntervalMs / this.progressManager.getPowerupLuck();
     }
 
     for (const powerup of this.powerups) {

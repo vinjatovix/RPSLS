@@ -23,7 +23,7 @@ const MAX_WIDTH = 5120;
  * Minimal fake game that satisfies what Enemy uses in update():
  * canvasAdapter, options.mechanics and scoreManager. Never draws.
  */
-function makeFakeGame(arena) {
+function makeFakeGame(arena, raceStats) {
   const scale = arena.width / MAX_WIDTH;
   return {
     canvasAdapter: {
@@ -43,7 +43,8 @@ function makeFakeGame(arena) {
       mechanics: { limitCanvas: true, outDies: false },
       effects: {}
     },
-    scoreManager: { recordKill: () => {} }
+    scoreManager: { recordKill: () => {} },
+    raceStats
   };
 }
 
@@ -52,8 +53,8 @@ function makeFakeGame(arena) {
  * the chaser enters from a given distance and must close in and kill it.
  * Measures the real time (approach + damage) until the kill.
  */
-function runTrial(chaserTeam, victimTeam, { arena, distance, deltaTime, maxSteps }) {
-  const game = makeFakeGame(arena);
+function runTrial(chaserTeam, victimTeam, { arena, distance, deltaTime, maxSteps, raceStats }) {
+  const game = makeFakeGame(arena, raceStats);
   const centerX = arena.width / 2;
   const centerY = arena.height / 2;
   const chaser = new RACE_CLASSES[chaserTeam]({ game, x: centerX + distance, y: centerY });
@@ -80,24 +81,26 @@ function runTrial(chaserTeam, victimTeam, { arena, distance, deltaTime, maxSteps
  * @param {number} opts.deltaTime - Fixed delta time in ms (default 16).
  * @param {number} opts.maxSteps - Max steps per trial (default 12000 ≈ 192 s sim).
  * @param {Object} opts.arena - Arena size.
+ * @param {Object} [opts.raceStats] - Injected race stats.
  */
 export function runMatchupSim({
   seeds = 12,
   distance = 200,
   deltaTime = 16,
   maxSteps = 12000,
-  arena = DEFAULT_ARENA
+  arena = DEFAULT_ARENA,
+  raceStats = RACE_STATS
 } = {}) {
   const pairs = {};
   for (const chaser of TEAMS) {
     for (const victim of TEAMS) {
-      if (!RACE_STATS[chaser].aim.includes(victim)) continue;
+      if (!raceStats[chaser].aim.includes(victim)) continue;
       let chaserWins = 0;
       let victimWins = 0;
       let timeouts = 0;
       let killStepsTotal = 0;
       for (let seedIndex = 0; seedIndex < seeds; seedIndex++) {
-        const trialResult = runTrial(chaser, victim, { arena, distance, deltaTime, maxSteps });
+        const trialResult = runTrial(chaser, victim, { arena, distance, deltaTime, maxSteps, raceStats });
         if (trialResult.winner === chaser) {
           chaserWins += 1;
           killStepsTotal += trialResult.steps;

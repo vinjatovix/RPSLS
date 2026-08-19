@@ -9,10 +9,15 @@ export class CombatSystem {
     this.vampire = vampire;
     this.buffManager = buffManager;
     this.scoreManager = scoreManager;
+
+    const maxDimension = Math.max(this.entity.width || 20, this.entity.height || 20);
+    const safetyMarginMultiplier = 1.25;
+    this.queryRadius = maxDimension * safetyMarginMultiplier;
   }
 
   getDamage() {
     const buffMultiplier = this.buffManager.getMultiplier("damage");
+
     return this.baseDamage * this.damageMultiplier * buffMultiplier;
   }
 
@@ -49,11 +54,9 @@ export class CombatSystem {
     let candidates = allEnemies;
     const grid = this.entity.game?.spatialGrid;
     if (grid) {
-      const maxDim = Math.max(this.entity.width || 20, this.entity.height || 20);
-      const queryRadius = maxDim * 1.25; // Margen de seguridad dinámico del 25%
       const cx = this.entity.x + (this.entity.width || 20) / 2;
       const cy = this.entity.y + (this.entity.height || 20) / 2;
-      candidates = grid.query(cx, cy, queryRadius);
+      candidates = grid.query(cx, cy, this.queryRadius);
     }
 
     for (const enemy of candidates) {

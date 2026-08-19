@@ -1,19 +1,19 @@
-import { Random } from "../core/index.js";
-import { GAME_CONFIG, RACE_STATS } from "../config/gameConfig.js";
 import { pickEscapePoint } from "../canvas/index.js";
-
-const PREDATORS = {};
-for (const team of Object.keys(RACE_STATS)) {
-  PREDATORS[team] = Object.keys(RACE_STATS).filter(
-    predator => RACE_STATS[predator].aim.includes(team)
-  );
-}
+import { Random } from "../core/index.js";
 
 export class TargetingSystem {
   constructor(entity, canvasAdapter, buffManager) {
     this.entity = entity;
     this.canvasAdapter = canvasAdapter;
     this.buffManager = buffManager;
+
+    if (!this.entity.game || !this.entity.game.predators) {
+      throw new TypeError("game.predators is required");
+    }
+    this.predators = this.entity.game.predators[this.entity.team];
+    if (!this.predators) {
+      throw new TypeError(`predators map is missing for team ${this.entity.team}`);
+    }
   }
 
   #distanceSquared(a, b) {
@@ -86,19 +86,21 @@ export class TargetingSystem {
       }
 
       const result = this.#findNearest(allEnemies, isPrey, maxDiag);
+
       return result?.enemy ?? null;
     }
 
     const result = this.#findNearest(allEnemies, isPrey, null);
+
     return result?.enemy ?? null;
   }
 
   #findClosestThreat(allEnemies) {
-    const { dangerRadius } = GAME_CONFIG.mechanics.ai;
+    const { dangerRadius } = this.entity.game.config.mechanics.ai;
     const dangerRadiusSq = dangerRadius * dangerRadius;
     const result = this.#findNearest(
       allEnemies,
-      enemy => PREDATORS[this.entity.team].includes(enemy.team),
+      enemy => this.predators.includes(enemy.team),
       dangerRadius
     );
     if (!result || result.distSq >= dangerRadiusSq) return null;
@@ -123,7 +125,7 @@ export class TargetingSystem {
     const threat = this.#findClosestThreat(allEnemies);
     if (!threat) return false;
 
-    const { dangerRadius, escape } = GAME_CONFIG.mechanics.ai;
+    const { dangerRadius, escape } = this.entity.game.config.mechanics.ai;
     const cx = this.entity.x + (this.entity.width || 0) / 2;
     const cy = this.entity.y + (this.entity.height || 0) / 2;
     const aim = pickEscapePoint(

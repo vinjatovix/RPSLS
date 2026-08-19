@@ -62,7 +62,7 @@ The project is built as a **headless-capable, pure ESM engine**. It requires no 
 - **Phase-Separated Execution Pipeline:** Structured updates into distinct, strictly synchronized temporal phases (AI/Targeting $\to$ Movement $\to$ Spatial Grid Sync $\to$ Collision Resolution) to eliminate temporal frame-aliasing and ensure spatial consistency.
 - **Headless Capability:** The entire game logic is decoupled from the DOM, allowing the `src/testing/` harness to run high-speed simulations in a terminal.
 - **Event-Driven UI Decoupling:** Employs a centralized `EventBus` to emit and subscribe to key state changes, fully decoupling core game mechanics from the DOM layout and UI components (like `ScorePanel`, `InfoPanel`, and `MetaPanel`).
-- **Data Immutability:** Core configurations (`gameConfig.js`) are deeply frozen to prevent runtime side-effects.
+- **Data Immutability & Dependency Injection:** Core configurations (`gameConfig.js`) are deeply frozen by default across all environments (browser and Node.js) to prevent runtime side-effects. The simulation engine avoids global configuration mutations by supporting **Dependency Injection (DI)**, accepting config overrides via the `Game` constructor. This guarantees isolated and race-condition-free execution during parallel automated testing and calibration runs.
 - **Spatial Partitioning (Optimization):** Utilizes a dynamic 2D Spatial Hash Grid with 32-bit packed integer key-hashing (avoiding string allocations), true zero-allocation array pooling, and entity query-result recycling. This reduces collision and targeting mathematical complexity from $O(N^2)$ to $O(N)$ with near-zero Garbage Collection overhead, ensuring a stable 60 FPS.
 
 ### Tech Stack
@@ -70,21 +70,11 @@ The project is built as a **headless-capable, pure ESM engine**. It requires no 
 - **Bundler:** `esbuild` (for production-ready, minified ESM)
 - **Deployment:** GitHub Actions $\to$ GitHub Pages
 
----
-
 ## 🗺 Design Specifications & Roadmap
 
 To maintain exceptional engineering standards, all major features, performance optimizations, and structural refactorings are designed through structured specifications before implementation. You can find them under `docs/specs/`:
 
-- **Spec #1:** Event-Driven UI Decoupling (Implemented)
-- **Spec #2:** Spatial Partitioning for $O(N^2)$ Collision Mitigation (Implemented)
-- **Spec #14:** EntityManager Extraction (Implemented)
-- **Spec #15:** MatchManager Extraction (Implemented)
-- **Spec #3:** Particle Object Pooling to reduce GC pressure (Planned)
-- **Spec #12:** Unit Test Infrastructure & Coverage Expansion (Planned)
-- **Spec #13:** Canvas Rendering Optimization: Caching & Batching (Planned)
-
-*(See `TASKS.md` for the complete backlog including Toroidal Arena, Achievements, and pending system extractions)*
+*(See `TASKS.md` for the complete backlog)
 
 ---
 

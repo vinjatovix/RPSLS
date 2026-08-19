@@ -1,4 +1,6 @@
-export const GAME_CONFIG = Object.freeze({
+import { deepFreeze } from "../core/deepFreeze.js";
+
+export const GAME_CONFIG = deepFreeze({
   display: {
     maxWidth: 1280 * 4,
     minWidth: 1280 / 2,
@@ -54,7 +56,7 @@ function race(team, { emoji, color, description, aim, health, damage, baseSpeed,
   };
 }
 
-export const RACE_STATS = Object.freeze({
+export const RACE_STATS = deepFreeze({
   rocks: race("rocks", {
     emoji: "🪨",
     color: "gray",
@@ -142,7 +144,7 @@ function powerup({ emoji, label, color, duration = 0, amount = 0, weight, range 
   return { emoji, label, color, duration, amount, weight, range, ...(trap && { trap }) };
 }
 
-export const POWERUP_TYPES = Object.freeze({
+export const POWERUP_TYPES = deepFreeze({
   heal: powerup({ emoji: "❤️", label: "Heal", color: "#ff5c5c", weight: 20 }),
   speed: powerup({ emoji: "⚡", label: "Speed", color: "#ffe14d", duration: 15000, amount: 2, weight: 16 }),
   damage: powerup({ emoji: "💥", label: "Damage", color: "#ff8c00", duration: 15000, amount: 2, weight: 14 }),
@@ -165,7 +167,7 @@ function mode(kind, capture) {
   return { label: `${kindLabel} · ${captureLabel}`, capture, isLeague: kind === "league", kind };
 }
 
-export const GAME_MODES = Object.freeze({
+export const GAME_MODES = deepFreeze({
   "league-death": mode("league", false),
   "infinite-death": mode("infinite", false),
   "level-death": mode("level", false),
@@ -174,13 +176,13 @@ export const GAME_MODES = Object.freeze({
   "level-capture": mode("level", true)
 });
 
-export const LEAGUE_LENGTHS = Object.freeze([50, 100, 200]);
+export const LEAGUE_LENGTHS = deepFreeze([50, 100, 200]);
 
 function upgrade({ label, emoji, perRace = true, baseCost, costGrowth = 1.35, description }) {
   return { label, emoji, perRace, baseCost, costGrowth, description };
 }
 
-export const UPGRADES = Object.freeze({
+export const UPGRADES = deepFreeze({
   health: upgrade({ label: "Health", emoji: "❤️", baseCost: 20, description: "+10% health" }),
   damage: upgrade({ label: "Damage", emoji: "💥", baseCost: 25, description: "+10% damage" }),
   speed: upgrade({ label: "Speed", emoji: "⚡", baseCost: 25, description: "+8% speed" }),

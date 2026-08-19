@@ -129,3 +129,36 @@ test("MatchManager: timeout winner evaluation with 2 teams", () => {
   assert.equal(winner, "scissors", "Scissors should win because it survived as the prey of Rocks");
   assert.equal(game.lastWin, "scissors");
 });
+
+test("MatchManager: respects customized matchTimeBaseMs and growth values injected via config", () => {
+  const customConfig = {
+    meta: {
+      initialTimeLeftMs: 5000,
+      enemiesPerLevel: 5
+    },
+    mechanics: {
+      matchTimeBaseMs: 15000,
+      matchTimeGrowthMs: 500,
+      matchTimeMaxMs: 30000
+    }
+  };
+  const game = new FakeGame();
+  game.config = customConfig;
+  game.mode.kind = "level";
+  const manager = new MatchManager({
+    game,
+    eventBus: game.eventBus,
+    options: game.options,
+    startLevel: 2
+  });
+  game.matchManager = manager;
+  manager.match = 2;
+
+  manager.startMatch();
+
+  const baseTime = customConfig.mechanics.matchTimeBaseMs;
+  const growthPerMatch = customConfig.mechanics.matchTimeGrowthMs;
+  const matchesPlayed = manager.match;
+  const expectedTimeLeft = baseTime + matchesPlayed * growthPerMatch;
+  assert.equal(manager.timeLeft, expectedTimeLeft);
+});

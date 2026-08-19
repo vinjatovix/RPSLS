@@ -18,6 +18,7 @@ Currently, `RACE_STATS` and `GAME_CONFIG` in `src/config/gameConfig.js` are deep
 ### Affected Modules
 - `src/config/gameConfig.js` (Deep freeze at the module level instead of browser bootstrap)
 - `src/index.js` (Freezing logic simplified; pass configs to constructor)
+- `src/entities/CombatSystem.js` (Cache queryRadius for performance, as entities have static dimensions)
 - `src/testing/balanceRunner.js` (Clone and inject configs)
 - `test/check-combo.mjs` (Clone and inject configs)
 
@@ -36,6 +37,9 @@ Currently, `RACE_STATS` and `GAME_CONFIG` in `src/config/gameConfig.js` are deep
     ```
 3.  **Harness Calibration Refactor:**
     Instead of mutating global `RACE_STATS.rocks.damage.amount = 999`, the calibration harness will deep-clone the base configuration, apply the patches, and instantiate `Game` with the cloned configuration.
+
+4.  **Static Dimension Caching Decision (`CombatSystem.js`):**
+    For performance reasons, `queryRadius` is cached statically inside the `CombatSystem` constructor based on `entity.width` and `entity.height` (which default to 20). Because entities in this simulation have immutable/static dimensions, dynamic recalculation or getters represent unnecessary overhead (YAGNI). This design choice was discussed and approved twice; dynamic resizing of entities is out of scope.
 
 ## Verification Plan (Definition of Done)
 ### Automated Tests

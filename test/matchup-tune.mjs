@@ -38,19 +38,16 @@ function summary(result) {
   };
 }
 
-const originals = {};
-for (const team of teams) originals[team] = RACE_STATS[team].movement.rotationAcceleration;
-
-console.log(`Matchup-tune rotationAcceleration (${seeds} seeds) | base: ${JSON.stringify(originals)}`);
+console.log(`Matchup-tune rotationAcceleration (${seeds} seeds)`);
 console.log("mult | minRate avgRate avgTtk | pairs with <=90%");
 for (const multiplier of list) {
+  const clonedRaceStats = JSON.parse(JSON.stringify(RACE_STATS));
   for (const team of teams) {
-    RACE_STATS[team].movement.rotationAcceleration = originals[team] * multiplier;
+    clonedRaceStats[team].movement.rotationAcceleration = RACE_STATS[team].movement.rotationAcceleration * multiplier;
   }
-  const result = runMatchupSim({ seeds });
+  const result = runMatchupSim({ seeds, raceStats: clonedRaceStats });
   const summaryResult = summary(result);
   console.log(
     ` ${String(multiplier).padStart(4)} |  ${String(summaryResult.minKillRate.toFixed(0)).padStart(4)}%  ${String(summaryResult.averageKillRate.toFixed(1)).padStart(5)}%  ${summaryResult.averageTimeToKill.padStart(6)} | ${summaryResult.worstPairs}`
   );
 }
-for (const team of teams) RACE_STATS[team].movement.rotationAcceleration = originals[team];

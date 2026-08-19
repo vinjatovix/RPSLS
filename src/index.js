@@ -1,19 +1,42 @@
-import { GAME_CONFIG, GAME_MODES, RACE_STATS, UPGRADES, POWERUP_TYPES, LEAGUE_LENGTHS } from "./config/gameConfig.js";
-import { Clock, EventBus, deepFreeze } from "./core/index.js";
 import { CanvasAdapter, CollisionDetector, SpatialGrid } from "./canvas/index.js";
-import { InputHandler } from "./input/InputHandler.js";
-import { LocalStorageAdapter } from "./storage/LocalStorageAdapter.js";
-import { GameSettings } from "./options/GameSettings.js";
-import { ScoreManager } from "./scoring/ScoreManager.js";
-import { ProgressManager } from "./meta/ProgressManager.js";
+import { GAME_CONFIG, GAME_MODES, LEAGUE_LENGTHS, POWERUP_TYPES, RACE_STATS, UPGRADES } from "./config/gameConfig.js";
+import { Clock, EventBus, deepFreeze } from "./core/index.js";
 import { Enemy, PowerUp, MatchManager, EntityManager, RACE_CLASSES } from "./entities/index.js";
+import { InputHandler } from "./input/InputHandler.js";
+import { ProgressManager } from "./meta/ProgressManager.js";
+import { GameSettings } from "./options/GameSettings.js";
 import { ParticleSystem } from "./particles/index.js";
+import { ScoreManager } from "./scoring/ScoreManager.js";
+import { LocalStorageAdapter } from "./storage/LocalStorageAdapter.js";
 import { MenuController, InfoPanel, ScorePanel, DebugDrawer, MetaPanel } from "./ui/index.js";
 
 class Game {
-  constructor({ startLevel = 0, mode = "infinite-death", leagueLength = 50, team = null } = {}) {
-    this.modeKey = GAME_MODES[mode] ? mode : "infinite-death";
-    this.mode = GAME_MODES[this.modeKey];
+  constructor({
+    startLevel = 0,
+    mode = "infinite-death",
+    leagueLength = 50,
+    team = null,
+    config = GAME_CONFIG,
+    raceStats = RACE_STATS,
+    upgrades = UPGRADES,
+    powerupTypes = POWERUP_TYPES,
+    gameModes = GAME_MODES,
+    leagueLengths = LEAGUE_LENGTHS
+  } = {}) {
+    this.config = config;
+    this.raceStats = raceStats;
+    this.upgrades = upgrades;
+    this.powerupTypes = powerupTypes;
+    this.gameModes = gameModes;
+    this.leagueLengths = leagueLengths;
+    this.predators = {};
+    for (const team of Object.keys(this.raceStats)) {
+      this.predators[team] = Object.keys(this.raceStats).filter(
+        predator => this.raceStats[predator].aim?.includes(team)
+      );
+    }
+    this.modeKey = this.gameModes[mode] ? mode : "infinite-death";
+    this.mode = this.gameModes[this.modeKey];
     this.leagueLength = leagueLength;
 
     this.inputHandler = new InputHandler();
@@ -21,7 +44,7 @@ class Game {
     this.options = new GameSettings({
       inputHandler: this.inputHandler,
       storageAdapter: this.storageAdapter,
-      gameConfig: GAME_CONFIG
+      gameConfig: this.config
     });
 
     this.canvasAdapter = new CanvasAdapter({
@@ -49,9 +72,11 @@ class Game {
     this.width = this.canvasAdapter.getWidth();
     this.height = this.canvasAdapter.getHeight();
     this.progressManager = new ProgressManager({
-      eventBus: this.eventBus
+      eventBus: this.eventBus,
+      raceStats: this.raceStats,
+      upgrades: this.upgrades
     });
-    if (team && RACE_STATS[team]) {
+    if (team && this.raceStats[team]) {
       this.progressManager.selectTeam(team);
     }
 
@@ -67,7 +92,10 @@ class Game {
       progressManager: this.progressManager
     });
 
-    this.scoreManager = new ScoreManager({ eventBus: this.eventBus });
+    this.scoreManager = new ScoreManager({
+      eventBus: this.eventBus,
+      raceStats: this.raceStats
+    });
     this.matchManager = new MatchManager({
       game: this,
       eventBus: this.eventBus,
@@ -76,7 +104,7 @@ class Game {
     });
 
     this.eventBus.subscribe("game:match-start", ({ matchNumber }) => {
-      const enemyGroupCount = Math.max(1, Math.floor(matchNumber / GAME_CONFIG.meta.enemiesPerLevel));
+      const enemyGroupCount = Math.max(1, Math.floor(matchNumber / this.config.meta.enemiesPerLevel));
       this.entityManager.spawnMatch(enemyGroupCount);
     });
 
@@ -107,7 +135,9 @@ class Game {
     this.onLeagueEnd = null;
     this.metaPanel = new MetaPanel({
       progressManager: this.progressManager,
-      eventBus: this.eventBus
+      eventBus: this.eventBus,
+      raceStats: this.raceStats,
+      upgrades: this.upgrades
     });
 
     if (this.progressManager.isTeamChosen()) {
@@ -245,16 +275,8 @@ class Game {
 document.addEventListener("DOMContentLoaded", () => {
   if (window.__NO_AUTOSTART__) return;
 
-  // Anti-hack barrier: deep-freezes the config and the prototypes of the
-  // game classes. ONLY here (browser bootstrap); never at module level,
-  // because the balance harness in Node mutates RACE_STATS/GAME_CONFIG
-  // to calibrate.
-  deepFreeze(RACE_STATS);
-  deepFreeze(GAME_CONFIG);
-  deepFreeze(GAME_MODES);
-  deepFreeze(UPGRADES);
-  deepFreeze(POWERUP_TYPES);
-  deepFreeze(LEAGUE_LENGTHS);
+  // Anti-hack barrier: deep-freezes the prototypes of the
+  // game classes to prevent runtime manipulation in the browser.
   for (const classes of [
     Game,
     EntityManager,

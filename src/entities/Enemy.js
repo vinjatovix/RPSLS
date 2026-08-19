@@ -1,16 +1,16 @@
-import { Random } from "../core/index.js";
-import { RACE_STATS } from "../config/gameConfig.js";
 import { CollisionDetector } from "../canvas/index.js";
+import { Random } from "../core/index.js";
 import { BuffManager } from "./BuffManager.js";
-import { MovementController } from "./MovementController.js";
-import { TargetingSystem } from "./TargetingSystem.js";
 import { CombatSystem } from "./CombatSystem.js";
 import { EnemyRenderer } from "./EnemyRenderer.js";
+import { MovementController } from "./MovementController.js";
+import { TargetingSystem } from "./TargetingSystem.js";
 
 export class Enemy {
   constructor({ game, x = null, y = null, angle = null, modifiers = null }, team = "rocks") {
+    this.game = game;
     this.team = team;
-    const stats = RACE_STATS[team];
+    const stats = game.raceStats[team];
     const {
       health = 1,
       damage = 1,
@@ -24,7 +24,6 @@ export class Enemy {
     this.aim = [...stats.aim];
     this.rotationOffset = stats.rotationOffset || 0;
 
-    this.game = game;
     this.context = this.game.canvasAdapter.getContext();
     const spawn = this.game.canvasAdapter.getRandomSpawnPoint();
     this.x = x || spawn.x;

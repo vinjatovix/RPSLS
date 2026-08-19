@@ -103,11 +103,14 @@ test("SpatialGrid: benchmarking with 200 entities", () => {
 });
 
 test("SpatialGrid: toroidal wrap-around behavior", () => {
-  // Width: 800, Height: 600, Cell size: 100x100 (cols=8, rows=6)
-  const grid = new SpatialGrid(100, 100, {
+  const cellWidth = 100;
+  const cellHeight = 100;
+  const width = 800;
+  const height = 600;
+  const grid = new SpatialGrid(cellWidth, cellHeight, {
     isToroidal: true,
-    width: 800,
-    height: 600
+    width,
+    height
   });
 
   const leftBorderEntity = { x: 50, y: 300, name: "left" };
@@ -116,26 +119,31 @@ test("SpatialGrid: toroidal wrap-around behavior", () => {
   grid.insert(leftBorderEntity);
   grid.insert(rightBorderEntity);
 
-  // Query from near left border (x=10, y=300) with a radius of 100
-  const results = grid.query(10, 300, 100);
+  const queryX = 10;
+  const queryY = 300;
+  const searchRadius = 100;
+  const results = grid.query(queryX, queryY, searchRadius);
 
   assert.ok(results.includes(leftBorderEntity), "Should find left border entity");
   assert.ok(results.includes(rightBorderEntity), "Should find right border entity via wrap-around!");
 });
 
-test("TargetingSystem: incremental/expanding search on spatial grid", () => {
-  // Set up spatial grid with cell size 100x100
-  const grid = new SpatialGrid(100, 100, { width: 800, height: 600 });
+test("TargetingSystem: incremental search on spatial grid finds close prey within initial radius", () => {
+  const cellWidth = 100;
+  const cellHeight = 100;
+  const grid = new SpatialGrid(cellWidth, cellHeight, { width: 800, height: 600 });
   
-  // Mock entity
-  const entity = {
+  const mockEntity = {
     x: 50,
     y: 50,
     width: 20,
     height: 20,
     team: "rocks",
-    aim: ["scissors"], // Rocks aim at Scissors (prey)
-    game: { spatialGrid: grid }
+    aim: ["scissors"], 
+    game: {
+      spatialGrid: grid,
+      predators: { rocks: [] }
+    }
   };
 
   const canvasAdapter = {
@@ -149,42 +157,80 @@ test("TargetingSystem: incremental/expanding search on spatial grid", () => {
     isConfused: () => false
   };
 
-  const targeting = new TargetingSystem(entity, canvasAdapter, buffManager);
+  const targeting = new TargetingSystem(mockEntity, canvasAdapter, buffManager);
 
-  // Scenario A: Prey is close (within grid.cellWidth * 1.5 = 150px)
   const closePrey = { x: 120, y: 50, width: 20, height: 20, team: "scissors", dead: false };
   const farPrey = { x: 500, y: 500, width: 20, height: 20, team: "scissors", dead: false };
   
   grid.insert(closePrey);
   grid.insert(farPrey);
 
-  // Track queries
-  const queryRadii = [];
+  const capturedQueryRadii = [];
   const originalQuery = grid.query.bind(grid);
   grid.query = (x, y, radius, outCandidates) => {
-    queryRadii.push(radius);
+    capturedQueryRadii.push(radius);
     return originalQuery(x, y, radius, outCandidates);
   };
 
-  // Run setTarget with close prey present
   targeting.setTarget([closePrey, farPrey]);
 
-  assert.equal(entity.closest, closePrey, "Should find the close prey");
-  assert.equal(queryRadii.length, 1, "Should only perform 1 query because prey was found in initial radius");
-  assert.equal(queryRadii[0], 150, "Initial search radius should be grid.cellWidth * 1.5 = 150");
+  const expectedInitialRadius = cellWidth * 1.5;
 
-  // Reset tracking and clear grid
-  queryRadii.length = 0;
-  grid.clear();
+  assert.equal(mockEntity.closest, closePrey, "Should find the close prey");
+  assert.equal(capturedQueryRadii.length, 1, "Should only perform 1 query because prey was found in initial radius");
+  assert.equal(capturedQueryRadii[0], expectedInitialRadius, "Initial search radius should be 1.5 times the cell width");
+});
 
-  // Scenario B: Prey is far away (requires expanding queries)
+test("TargetingSystem: incremental search on spatial grid expands query radius when prey is far away", () => {
+  const cellWidth = 100;
+  const cellHeight = 100;
+  const grid = new SpatialGrid(cellWidth, cellHeight, { width: 800, height: 600 });
+  
+  const mockEntity = {
+    x: 50,
+    y: 50,
+    width: 20,
+    height: 20,
+    team: "rocks",
+    aim: ["scissors"], 
+    game: {
+      spatialGrid: grid,
+      predators: { rocks: [] }
+    }
+  };
+
+  const canvasAdapter = {
+    getWidth: () => 800,
+    getHeight: () => 600,
+    getSize: () => ({ width: 800, height: 600 }),
+    getCenter: () => ({ x: 400, y: 300 })
+  };
+
+  const buffManager = {
+    isConfused: () => false
+  };
+
+  const targeting = new TargetingSystem(mockEntity, canvasAdapter, buffManager);
+
+  const farPrey = { x: 500, y: 500, width: 20, height: 20, team: "scissors", dead: false };
   grid.insert(farPrey);
+
+  const capturedQueryRadii = [];
+  const originalQuery = grid.query.bind(grid);
+  grid.query = (x, y, radius, outCandidates) => {
+    capturedQueryRadii.push(radius);
+    return originalQuery(x, y, radius, outCandidates);
+  };
 
   targeting.setTarget([farPrey]);
 
-  assert.equal(entity.closest, farPrey, "Should find the far prey");
-  assert.ok(queryRadii.length > 1, "Should perform multiple queries (expanding radius) to find far prey");
-  assert.equal(queryRadii[0], 150, "Initial search radius should be 150");
-  assert.ok(queryRadii.includes(300), "Should have expanded to 300");
-  assert.ok(queryRadii.includes(600), "Should have expanded to 600");
+  const expectedInitialRadius = 150;
+  const expectedExpandedRadiusStep1 = 300;
+  const expectedExpandedRadiusStep2 = 600;
+
+  assert.equal(mockEntity.closest, farPrey, "Should find the far prey");
+  assert.ok(capturedQueryRadii.length > 1, "Should perform multiple queries (expanding radius) to find far prey");
+  assert.equal(capturedQueryRadii[0], expectedInitialRadius, "Initial search radius should be 150");
+  assert.ok(capturedQueryRadii.includes(expectedExpandedRadiusStep1), "Should have expanded to 300");
+  assert.ok(capturedQueryRadii.includes(expectedExpandedRadiusStep2), "Should have expanded to 600");
 });
