@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import "./dom-stub.js";
-import { Game } from "../src/index.js";
-import { GAME_MODES, LEAGUE_LENGTHS, GAME_CONFIG } from "../src/config/gameConfig.js";
+import "../dom-stub.js";
+import { Game } from "../../src/index.js";
+import { GAME_MODES, LEAGUE_LENGTHS, GAME_CONFIG } from "../../src/config/gameConfig.js";
 
 test("Config: GAME_MODES has 6 well-defined modes", () => {
   assert.equal(Object.keys(GAME_MODES).length, 6);

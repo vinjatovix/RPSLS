@@ -1,6 +1,6 @@
 import { GAME_CONFIG, GAME_MODES, RACE_STATS, UPGRADES, POWERUP_TYPES, LEAGUE_LENGTHS } from "./config/gameConfig.js";
 import { Clock, EventBus, deepFreeze } from "./core/index.js";
-import { CanvasAdapter, SpatialGrid } from "./canvas/index.js";
+import { CanvasAdapter, CollisionDetector, SpatialGrid } from "./canvas/index.js";
 import { InputHandler } from "./input/InputHandler.js";
 import { LocalStorageAdapter } from "./storage/LocalStorageAdapter.js";
 import { GameSettings } from "./options/GameSettings.js";
@@ -190,23 +190,27 @@ class Game {
   }
 
   #handlePointerDown(event) {
-    if (this.matchManager.paused || !this.progressManager.isTeamChosen()) return;
-    const canvas = this.canvasAdapter.getCanvas();
-    const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    if (this.matchManager.paused || !this.progressManager.isTeamChosen()) {
+      return;
+    }
 
-    const pointerX = ((event.clientX - rect.left) * canvas.width) / rect.width;
-    const pointerY = ((event.clientY - rect.top) * canvas.height) / rect.height;
+    const coords = this.canvasAdapter.clientToCanvasCoordinates(event.clientX, event.clientY);
+    if (!coords) {
+      return;
+    }
+
     const team = this.progressManager.selectedTeam;
 
     for (const powerup of this.powerups) {
-      if (powerup.dead || powerup.isExpired()) continue;
+      if (powerup.dead || powerup.isExpired()) {
+        continue;
+      }
+
       const centerX = powerup.x + powerup.width / 2;
       const centerY = powerup.y + powerup.height / 2;
-      const deltaX = pointerX - centerX;
-      const deltaY = pointerY - centerY;
       const radius = powerup.width * this.progressManager.getCollectRadiusMultiplier();
-      if (deltaX * deltaX + deltaY * deltaY <= radius * radius) {
+
+      if (CollisionDetector.isPointInsideCircle(coords.x, coords.y, centerX, centerY, radius)) {
         powerup.applyForClick(team);
         break;
       }

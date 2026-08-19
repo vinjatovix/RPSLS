@@ -84,4 +84,16 @@ export class CanvasAdapter {
       y: Math.max(0, Math.min(position.y, this.canvas.height - position.height))
     };
   }
+
+  clientToCanvasCoordinates(clientX, clientY) {
+    const rect = this.canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) {
+      return null;
+    }
+
+    return {
+      x: ((clientX - rect.left) * this.canvas.width) / rect.width,
+      y: ((clientY - rect.top) * this.canvas.height) / rect.height
+    };
+  }
 }

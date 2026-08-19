@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { deepFreeze } from "../src/core/index.js";
-import { RACE_STATS } from "../src/config/gameConfig.js";
+import { deepFreeze } from "../../src/core/index.js";
+import { RACE_STATS } from "../../src/config/gameConfig.js";
 
 test("deepFreeze freezes deeply", () => {
   const config = { a: { b: { c: 1 } }, arr: [1, 2] };

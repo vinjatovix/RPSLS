@@ -1,8 +1,9 @@
-import test from 'node:test';
-import assert from 'node:assert';
-import { EventBus } from '../src/core/index.js';
-import { InfoPanel, MetaPanel, ScorePanel } from '../src/ui/index.js';
 import { JSDOM } from 'jsdom';
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import { EventBus } from '../../src/core/index.js';
+import { InfoPanel, MetaPanel, ScorePanel } from '../../src/ui/index.js';
 
 function createTestEnvironment() {
   const dom = new JSDOM(`<!DOCTYPE html><html><body>
@@ -10,7 +11,6 @@ function createTestEnvironment() {
     <div id="round-info"></div>
     <div id="credits"></div>
     <div id="shop-list"></div>
-    <div id="upgrades"></div>
   </body></html>`);
   
   const { window } = dom;
@@ -22,21 +22,35 @@ function createTestEnvironment() {
   return { dom, window };
 }
 
+function setupUIContext(customProgress = {}, customScoreManagerRanking = []) {
+  createTestEnvironment();
+  const eventBus = new EventBus();
+  
+  const mockProgress = { 
+    credits: 0, 
+    selectedTeam: 'rocks',
+    getPowerupLuck: () => 1,
+    getUpgradeLevel: () => 0,
+    getUpgradeCost: () => 0,
+    eventBus,
+    ...customProgress
+  };
+  
+  const getRanking = typeof customScoreManagerRanking === 'function' 
+    ? customScoreManagerRanking 
+    : () => customScoreManagerRanking;
+
+  const scoreManagerMock = {
+    eventBus,
+    getRanking
+  };
+  
+  return { eventBus, mockProgress, scoreManagerMock };
+}
+
 test('UI Event-Driven Architecture', async (t) => {
   await t.test('InfoPanel reacts to game:match-start event', async () => {
-    createTestEnvironment();
-    const eventBus = new EventBus();
-    
-    const mockProgress = { 
-      credits: 0, 
-      selectedTeam: 'rocks',
-      getPowerupLuck: () => 1 
-    };
-    
-    const scoreManagerMock = {
-      eventBus,
-      getRanking: () => []
-    };
+    const { eventBus, mockProgress, scoreManagerMock } = setupUIContext();
     new InfoPanel({ 
       scoreManager: scoreManagerMock, 
       progressManager: mockProgress, 
@@ -49,19 +63,7 @@ test('UI Event-Driven Architecture', async (t) => {
   });
 
   await t.test('InfoPanel shows last winner after game:match-end', async () => {
-    createTestEnvironment();
-    const eventBus = new EventBus();
-    
-    const mockProgress = { 
-      credits: 0, 
-      selectedTeam: 'rocks',
-      getPowerupLuck: () => 1 
-    };
-    
-    const scoreManagerMock = {
-      eventBus,
-      getRanking: () => []
-    };
+    const { eventBus, mockProgress, scoreManagerMock } = setupUIContext();
     new InfoPanel({ 
       scoreManager: scoreManagerMock, 
       progressManager: mockProgress, 
@@ -77,18 +79,7 @@ test('UI Event-Driven Architecture', async (t) => {
   });
 
   await t.test('MetaPanel reacts to progress:update event', async () => {
-    createTestEnvironment();
-    const eventBus = new EventBus();
-    
-    const mockProgress = { 
-      credits: 0, 
-      selectedTeam: 'rocks',
-      getPowerupLuck: () => 1,
-      getUpgradeLevel: () => 0,
-      getUpgradeCost: () => 0,
-      eventBus: eventBus
-    };
-  
+    const { eventBus, mockProgress } = setupUIContext();
     new MetaPanel({ progressManager: mockProgress, eventBus });
   
     mockProgress.credits = 100;
@@ -99,16 +90,10 @@ test('UI Event-Driven Architecture', async (t) => {
   });
 
   await t.test('ScorePanel displays team name and ranking data', async () => {
-    createTestEnvironment();
-    const eventBus = new EventBus();
-    
-    const scoreManagerMock = {
-      eventBus,
-      getRanking: () => [
-        { emoji: '\u{1FAA8}', score: 10, kills: 5, deaths: 2, ratio: 2.5, name: 'rocks' },
-        { emoji: '\u{1F4C4}', score: 5, kills: 2, deaths: 3, ratio: 0.66, name: 'papers' }
-      ]
-    };
+    const { eventBus, scoreManagerMock } = setupUIContext({}, [
+      { emoji: '\u{1FAA8}', score: 10, kills: 5, deaths: 2, ratio: 2.5, name: 'rocks' },
+      { emoji: '\u{1F4C4}', score: 5, kills: 2, deaths: 3, ratio: 0.66, name: 'papers' }
+    ]);
     const panel = new ScorePanel({ 
       scoreManager: scoreManagerMock, 
       eventBus 
@@ -122,20 +107,7 @@ test('UI Event-Driven Architecture', async (t) => {
   });
 
   await t.test('InfoPanel cleans up subscriptions on destroy', async () => {
-    createTestEnvironment();
-    const eventBus = new EventBus();
-    
-    const mockProgress = { 
-      credits: 0, 
-      selectedTeam: 'rocks',
-      getPowerupLuck: () => 1 
-    };
-    
-    const scoreManagerMock = {
-      eventBus,
-      getRanking: () => []
-    };
-  
+    const { eventBus, mockProgress, scoreManagerMock } = setupUIContext();
     const panel = new InfoPanel({ 
       scoreManager: scoreManagerMock, 
       progressManager: mockProgress, 
@@ -153,19 +125,14 @@ test('UI Event-Driven Architecture', async (t) => {
   });
 
   await t.test('ScorePanel reacts to score:update event', async () => {
-    createTestEnvironment();
-    const eventBus = new EventBus();
-    
     let callCount = 0;
-    const scoreManagerMock = {
-      eventBus,
-      getRanking: () => {
-        callCount++;
-        return [
-          { emoji: '\u{1FAA8}', score: 10, kills: 5, deaths: 2, ratio: 2.5, name: 'rocks' }
-        ];
-      }
-    };
+    const { eventBus, scoreManagerMock } = setupUIContext({}, () => {
+      callCount++;
+
+      return [
+        { emoji: '\u{1FAA8}', score: 10, kills: 5, deaths: 2, ratio: 2.5, name: 'rocks' }
+      ];
+    });
     new ScorePanel({ 
       scoreManager: scoreManagerMock, 
       eventBus 
@@ -179,19 +146,7 @@ test('UI Event-Driven Architecture', async (t) => {
   });
 
   await t.test('InfoPanel reacts to tick event', async () => {
-    createTestEnvironment();
-    const eventBus = new EventBus();
-    
-    const mockProgress = { 
-      credits: 0, 
-      selectedTeam: 'rocks',
-      getPowerupLuck: () => 1 
-    };
-    
-    const scoreManagerMock = {
-      eventBus,
-      getRanking: () => []
-    };
+    const { eventBus, mockProgress, scoreManagerMock } = setupUIContext();
     new InfoPanel({ 
       scoreManager: scoreManagerMock, 
       progressManager: mockProgress, 
@@ -205,19 +160,7 @@ test('UI Event-Driven Architecture', async (t) => {
   });
 
   await t.test('InfoPanel reacts to game:mechanics-change event', async () => {
-    createTestEnvironment();
-    const eventBus = new EventBus();
-    
-    const mockProgress = { 
-      credits: 0, 
-      selectedTeam: 'rocks',
-      getPowerupLuck: () => 1 
-    };
-    
-    const scoreManagerMock = {
-      eventBus,
-      getRanking: () => []
-    };
+    const { eventBus, mockProgress, scoreManagerMock } = setupUIContext();
     new InfoPanel({ 
       scoreManager: scoreManagerMock, 
       progressManager: mockProgress, 
@@ -232,19 +175,7 @@ test('UI Event-Driven Architecture', async (t) => {
   });
 
   await t.test('InfoPanel reacts to progress:update event', async () => {
-    createTestEnvironment();
-    const eventBus = new EventBus();
-    
-    const mockProgress = { 
-      credits: 0, 
-      selectedTeam: 'rocks',
-      getPowerupLuck: () => 1 
-    };
-    
-    const scoreManagerMock = {
-      eventBus,
-      getRanking: () => []
-    };
+    const { eventBus, mockProgress, scoreManagerMock } = setupUIContext();
     new InfoPanel({ 
       scoreManager: scoreManagerMock, 
       progressManager: mockProgress, 
@@ -260,17 +191,12 @@ test('UI Event-Driven Architecture', async (t) => {
   });
 
   await t.test('ScorePanel cleans up subscriptions on destroy', async () => {
-    createTestEnvironment();
-    const eventBus = new EventBus();
-    
     let callCount = 0;
-    const scoreManagerMock = {
-      eventBus,
-      getRanking: () => {
-        callCount++;
-        return [];
-      }
-    };
+    const { eventBus, scoreManagerMock } = setupUIContext({}, () => {
+      callCount++;
+
+      return [];
+    });
     const panel = new ScorePanel({ 
       scoreManager: scoreManagerMock, 
       eventBus 
@@ -284,21 +210,11 @@ test('UI Event-Driven Architecture', async (t) => {
   
     const afterDestroy = callCount;
     eventBus.emit('score:update');
-    assert.equal(callCount, afterDestroy, 'Should NOT react after destroy');
+    assert.strictEqual(callCount, afterDestroy, 'Should NOT react after destroy');
   });
 
   await t.test('MetaPanel cleans up subscriptions on destroy', async () => {
-    createTestEnvironment();
-    const eventBus = new EventBus();
-    
-    const mockProgress = { 
-      credits: 0, 
-      selectedTeam: 'rocks',
-      getPowerupLuck: () => 1,
-      getUpgradeLevel: () => 0,
-      getUpgradeCost: () => 0,
-      eventBus: eventBus
-    };
+    const { eventBus, mockProgress } = setupUIContext();
   
     const panel = new MetaPanel({ progressManager: mockProgress, eventBus });
   

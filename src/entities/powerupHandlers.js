@@ -3,9 +3,9 @@ export const GLOBAL_EFFECT_HANDLERS = {
   time: (powerup, team, config) => {
     powerup.game.matchManager.timeLeft += config.amount;
   },
-  gold: (powerup, team) => {
+  gold: (powerup, team, config) => {
     if (team !== powerup.game.progressManager.selectedTeam) return;
-    powerup.game.progressManager.awardCredits(5 + Math.floor(Random.next() * 21));
+    powerup.game.progressManager.awardCredits(config.amount + Math.floor(Random.next() * config.range));
   }
 };
 
