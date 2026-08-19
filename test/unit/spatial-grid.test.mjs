@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
-import { SpatialGrid } from "../src/canvas/geometry/SpatialGrid.js";
-import { TargetingSystem } from "../src/entities/TargetingSystem.js";
-import { Random } from "../src/core/index.js";
+import { SpatialGrid } from "../../src/canvas/geometry/SpatialGrid.js";
+import { TargetingSystem } from "../../src/entities/TargetingSystem.js";
+import { Random } from "../../src/core/index.js";
 
 test("SpatialGrid: initialization and default state", () => {
   const cellWidth = 100;

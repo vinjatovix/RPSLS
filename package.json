@@ -5,8 +5,8 @@
   "type": "module",
   "description": "Idle RPS - rock, paper, scissors, lizard, spock idle game",
   "scripts": {
-    "test": "node --test test/*.test.mjs",
-    "coverage": "node --test --experimental-test-coverage test/*.test.mjs",
+    "test": "node --test test/balance-guard.test.mjs test/unit/*.test.mjs test/integration/*.test.mjs",
+    "coverage": "node --test --experimental-test-coverage test/balance-guard.test.mjs test/unit/*.test.mjs test/integration/*.test.mjs",
     "check": "eslint . && node scripts/check.mjs",
     "check:circular": "skott src/index.js --displayMode=raw --showCircularDependencies",
     "balance": "node test/headless-campaign.mjs",

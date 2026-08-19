@@ -138,8 +138,8 @@ export const RACE_STATS = Object.freeze({
   })
 });
 
-function powerup({ emoji, label, color, duration = 0, amount = 0, weight, trap = false }) {
-  return { emoji, label, color, duration, amount, weight, ...(trap && { trap }) };
+function powerup({ emoji, label, color, duration = 0, amount = 0, weight, range = 0, trap = false }) {
+  return { emoji, label, color, duration, amount, weight, range, ...(trap && { trap }) };
 }
 
 export const POWERUP_TYPES = Object.freeze({
@@ -152,7 +152,7 @@ export const POWERUP_TYPES = Object.freeze({
   zap: powerup({ emoji: "💀", label: "Zap", color: "#9e9e9e", amount: 0.5, weight: 10, trap: true }),
   time: powerup({ emoji: "⏰", label: "Time", color: "#ffd54f", amount: 5000, weight: 6 }),
   haste: powerup({ emoji: "🚀", label: "Turbo", color: "#ffa94d", duration: 15000, amount: 2, weight: 10 }),
-  gold: powerup({ emoji: "💰", label: "Gold", color: "#ffd700", amount: 5, weight: 6 }),
+  gold: powerup({ emoji: "💰", label: "Gold", color: "#ffd700", amount: 5, range: 21, weight: 6 }),
   freeze: powerup({ emoji: "❄️", label: "Frozen", color: "#a8e6ff", duration: 5000, weight: 6, trap: true }),
   vampire: powerup({ emoji: "🧛", label: "Vampire", color: "#ff4d6d", duration: 10000, amount: 0.5, weight: 8 }),
   confusion: powerup({ emoji: "🌀", label: "Confused", color: "#c586ff", duration: 8000, weight: 6, trap: true }),

@@ -11,8 +11,10 @@
 4. **Pedir Permiso:** Antes de ejecutar comandos destructivos o de sistema, pregunta al desarrollador.
 5. **Inmutabilidad:** `gameConfig.js` está congelado. No mutar en runtime.
 6. **Opciones Object:** Funciones con >3 parámetros usan un objeto destructurado.
-7. **Integridad Arquitectónica:** **Cero dependencias circulares**. Obligatorio verificar con `npm run check:circular` (`skott`).
+7. **Integridad Arquitectónica:** **Cero dependencias circulares** **Integridad de tests** **Sintaxis**. Obligatorio pedir al desarrollador que lo verifique el con `npm run check:circular` (`skott`), `npm run test`, `npm run check` para ahorrar tokens, el confirmara que todo es correcto.
 8. **Testabilidad Headless:** Todo el código core (ajeno a UI/Canvas directo) debe poder ejecutarse en Node.js puro sin DOM, o con dom-stubs controlados.
+9. **Orden de los imports**: La importación de modulos en toda la base de código tiene un orden estricto, primero las dependencias externas, luego los módulos mas lejanos en el path terminando por los hermanos en el mismo directorio. En cada nivel por orden alfabético.
+10. **return**: en las funciones multilinea que tengan return, el return estará separado siempre por un salto de linea para facilitar la lectura.
 
 ## Estructura Clave y Archivos de Barril
 
@@ -45,32 +47,24 @@ test/
     *   *Unit Tests:* Aíslan la clase. **PROHIBIDO instanciar `new Game()`**. Usa `Builders`, `Mothers` y Test Doubles (`FakeEventBus`).
     *   *Integration Tests:* Orquestan múltiples módulos sin levantar la UI.
 3. **Implementación Quirúrgica:** Escribir el código en ESM puro, determinista, y completamente desacoplado.
-4. **Validación de Calidad:**
+4. **Validación de Calidad:**: Pedirle al usuario que corra los scripts y nos diga que está ok. En caso de fallo nos pegará el error.
     *   `npm run check` (Linting)
     *   `npm run check:circular` (Límites arquitectónicos limpios)
     *   `npm test` y `npm run coverage` (Ejecución de suite nativa en Node 22+)
-5. **Validación Estocástica:** Si el cambio afecta a físicas, combates o entidades, ejecutar `npm run balance`.
+5. **Validación Estocástica y Calibración:**
+    *   Si el cambio afecta a físicas, combates o entidades, ejecutar `npm run balance`.
+    *   Para probar empíricamente combinaciones o parches específicos en las estadísticas de las razas sin alterar el código, utilizar el script de utilidad interactivo: `node test/check-combo.mjs <runs> <levels> '<json_patch_plural>'...`. Este comando requiere obligatoriamente estos argumentos de entrada y no forma parte de la suite estándar de tests, sino que es una herramienta de experimentación determinista en tiempo real.
 6. **Revisión del DoD:** Validar que se cumple cada punto del Verification Plan de la Spec.
 
 ## Principios de Código y Testing
 
-*   **Fundaciones de Software:** Respetar estrictamente los principios **SOLID, DRY, KISS y YAGNI**.
+*   **Fundaciones de Software:** Respetar estrictamente los principios **SOLID, DRY, KISS y YAGNI**. Evitar a toda costa **STUPID**.
 *   **Desacoplamiento vía EventBus:** Preferir la comunicación basada en eventos (`EventBus`) para intercomunicar el core de simulación con sistemas periféricos (UI, partículas, etc.) antes que la inyección de dependencias directa. **Excepción:** Se permite inyección de dependencias directa o referencias directas únicamente si existe una razón de peso como el **rendimiento en caminos críticos (hot-paths)** de la simulación.
 *   **Testing Nativo Exclusivo:** Solo se permite `node:test` y `node:assert/strict`. Nada de Jest/Vitest.
 *   **Mothers & Builders:** Los tests unitarios deben enfocarse en el *comportamiento*, no en la *construcción*. Usa Object Mothers y Builders para instanciar estados claros y semánticos (ej: `EnemyMother.paperAtCenter()`).
+*   **Modulos**: En los tests unitarios cada suite de tests corresponderá exclusivamente a su módulo. 
 *   **Data-Driven Tests:** Utilizar arrays de casos o tablas para probar lógicas puramente matemáticas (ej: `EscapeSolver.js`).
-*   **Comentarios:** Si hay que añadir comentarios explicativos en el código de producción, es que no es lo suficientemente autoexplicativo (los comentarios deben limitarse a lo estrictamente necesario). En los tests, la estructura AAA (Arrange, Act, Assert) sí se puede comentar para guiar la lectura.
-
-## Comandos Clave
-
-```bash
-npm run check           # Linting via ESLint
-npm run check:circular  # Detección de deps circulares via Skott
-npm test                # Ejecuta Unit & Integration tests
-npm run coverage        # Genera métricas de cobertura (Node experimental)
-npm run balance         # Simulación E2E de balance estadístico
-npm run build           # Empaquetado via ESBuild
-```
+*   **Comentarios:** Si hay que añadir comentarios explicativos en el código de producción o de tests, es que no es lo suficientemente autoexplicativo (los comentarios deben limitarse a lo estrictamente necesario). 
 
 ## Equipos & Especialización (Simulación)
 - **Rocks:** Alto HP, Turn Rate lento.

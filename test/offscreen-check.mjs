@@ -6,6 +6,7 @@
 import "./dom-stub.js";
 import { Game } from "../src/index.js";
 import { TEAMS } from "../src/testing/balanceRunner.js";
+import { TICK_MS } from "./doubles/setupSimulationContext.mjs";
 
 const matches = +process.argv[2] || 100;
 
@@ -19,7 +20,7 @@ game.powerupTimer = Infinity;
 
 const allSeen = new Set();
 while (game.matchManager.match <= matches) {
-  game.update(16);
+  game.update(TICK_MS);
   for (const enemy of game.enemies) allSeen.add(enemy);
 }
 

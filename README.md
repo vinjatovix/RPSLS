@@ -36,6 +36,8 @@ The project includes a sophisticated suite of CLI tools for "tuning" the game's 
 | `npm run focus` | **Targeted Debugging** | A focused sweep of specific stats to observe localized impact. |
 | `npm run matchup` | **Combat Micro-mechanics** | Simulates 1v1 encounters to measure Catch-rate and Time-to-Kill (TTK). |
 | `npm run check` | **Structural Integrity** | Syntax-check of all `.js` and `.mjs` files in the workspace. |
+| `node test/check-combo.mjs <runs> <levels> '<json_patch_plural>'...` | **Interactive Tuning** | Evaluates specific JSON-formatted stat patches across multiple simulated runs to test "what-if" scenarios. |
+| `node test/offscreen-check.mjs [matches]` | **Off-screen Death Analysis** | Simulates headless matches to measure and compare off-screen boundary deaths vs. direct combat damage deaths per team. |
 
 ---
 

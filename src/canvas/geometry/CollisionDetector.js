@@ -16,4 +16,11 @@ export class CollisionDetector {
       y < canvasSize.height - height
     );
   }
+
+  static isPointInsideCircle(px, py, cx, cy, radius) {
+    const deltaX = px - cx;
+    const deltaY = py - cy;
+
+    return deltaX * deltaX + deltaY * deltaY <= radius * radius;
+  }
 }
