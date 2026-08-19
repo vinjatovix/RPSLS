@@ -5,6 +5,7 @@ import { JSDOM } from "jsdom";
 import { setupSimulationContext, TICK_MS } from "../doubles/setupSimulationContext.mjs";
 import { EnemyBuilder } from "../builders/EnemyBuilder.mjs";
 import { PowerUpBuilder } from "../builders/PowerUpBuilder.mjs";
+import { RACE_STATS, UPGRADES } from "../../src/config/gameConfig.js";
 import { EventBus } from "../../src/core/EventBus.js";
 import { InfoPanel, MetaPanel, ScorePanel } from "../../src/ui/index.js";
 
@@ -94,7 +95,7 @@ test("Memory Leak: UI Panels cleanly unsubscribe from the EventBus upon destroy"
   assert.equal(getSubscribersCount("score:update"), 0);
   const infoPanel = new InfoPanel({ scoreManager: mockScoreManager, progressManager: mockProgress, eventBus });
   const scorePanel = new ScorePanel({ scoreManager: mockScoreManager, eventBus });
-  const metaPanel = new MetaPanel({ progressManager: mockProgress, eventBus });
+  const metaPanel = new MetaPanel({ progressManager: mockProgress, eventBus, raceStats: RACE_STATS, upgrades: UPGRADES });
   assert.ok(getSubscribersCount("tick") > 0);
   assert.ok(getSubscribersCount("score:update") > 0);
   assert.ok(getSubscribersCount("progress:update") > 0);

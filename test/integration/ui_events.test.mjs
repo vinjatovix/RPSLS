@@ -2,8 +2,9 @@ import { JSDOM } from 'jsdom';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { RACE_STATS, UPGRADES } from '../../src/config/gameConfig.js';
 import { EventBus } from '../../src/core/index.js';
-import { InfoPanel, MetaPanel, ScorePanel } from '../../src/ui/index.js';
+import { InfoPanel, MenuController, MetaPanel, ScorePanel } from '../../src/ui/index.js';
 
 function createTestEnvironment() {
   const dom = new JSDOM(`<!DOCTYPE html><html><body>
@@ -11,6 +12,27 @@ function createTestEnvironment() {
     <div id="round-info"></div>
     <div id="credits"></div>
     <div id="shop-list"></div>
+  </body></html>`);
+  
+  const { window } = dom;
+  global.document = window.document;
+  global.window = window;
+  global.HTMLElement = window.HTMLElement;
+  global.Node = window.Node;
+  
+  return { dom, window };
+}
+
+function createMenuTestEnvironment() {
+  const dom = new JSDOM(`<!DOCTYPE html><html><body>
+    <div id="score-list"></div>
+    <div id="round-info"></div>
+    <div id="credits"></div>
+    <div id="shop-list"></div>
+    <div id="menu-overlay" hidden></div>
+    <div id="menu-title"></div>
+    <div id="menu-body"></div>
+    <div id="menu-actions"></div>
   </body></html>`);
   
   const { window } = dom;
@@ -80,7 +102,7 @@ test('UI Event-Driven Architecture', async (t) => {
 
   await t.test('MetaPanel reacts to progress:update event', async () => {
     const { eventBus, mockProgress } = setupUIContext();
-    new MetaPanel({ progressManager: mockProgress, eventBus });
+    new MetaPanel({ progressManager: mockProgress, eventBus, raceStats: RACE_STATS, upgrades: UPGRADES });
   
     mockProgress.credits = 100;
     eventBus.emit('progress:update', { credits: 100 });
@@ -216,7 +238,7 @@ test('UI Event-Driven Architecture', async (t) => {
   await t.test('MetaPanel cleans up subscriptions on destroy', async () => {
     const { eventBus, mockProgress } = setupUIContext();
   
-    const panel = new MetaPanel({ progressManager: mockProgress, eventBus });
+    const panel = new MetaPanel({ progressManager: mockProgress, eventBus, raceStats: RACE_STATS, upgrades: UPGRADES });
   
     mockProgress.credits = 50;
     eventBus.emit('progress:update', { credits: 50 });
@@ -227,5 +249,59 @@ test('UI Event-Driven Architecture', async (t) => {
     mockProgress.credits = 99;
     eventBus.emit('progress:update', { credits: 99 });
     assert.strictEqual(document.getElementById('credits').textContent, '50', 'Should NOT react after destroy');
+  });
+
+  await t.test('MenuController custom initialization', async (st) => {
+    await st.test('MenuController accepts custom raceStats and calculates statMaxes correctly', () => {
+      createMenuTestEnvironment();
+      
+      const customRaceStats = {
+        rocks: {
+          emoji: '🪨',
+          health: { max: 1000 },
+          damage: { amount: 5 },
+          movement: { maxSpeed: 2, acceleration: 0.1, rotationSpeed: 0.01 }
+        },
+        papers: {
+          emoji: '📄',
+          health: { max: 500 },
+          damage: { amount: 10 },
+          movement: { maxSpeed: 4, acceleration: 0.2, rotationSpeed: 0.02 }
+        }
+      };
+
+      const menu = new MenuController({
+        getGame: () => null,
+        onStart: () => {},
+        raceStats: customRaceStats
+      });
+
+      assert.strictEqual(menu.raceStats, customRaceStats, 'Should use the custom raceStats');
+      assert.strictEqual(menu.statMaxes.Health, 1000, 'Max health should be 1000');
+      assert.strictEqual(menu.statMaxes.Damage, 10, 'Max damage should be 10');
+      assert.strictEqual(menu.statMaxes.Speed, 4, 'Max speed should be 4');
+    });
+
+    await st.test('MenuController handles custom gameModes', () => {
+      createMenuTestEnvironment();
+
+      const customGameModes = {
+        'custom-mode': { label: 'Custom Mode', kind: 'infinite', capture: false }
+      };
+
+      const mockGame = {
+        raceStats: RACE_STATS,
+        gameModes: customGameModes,
+        leagueLengths: [10, 20]
+      };
+
+      const menu = new MenuController({
+        getGame: () => mockGame,
+        onStart: () => {}
+      });
+
+      assert.deepEqual(menu.gameModes, customGameModes, 'Should resolve custom gameModes from game');
+      assert.deepEqual(menu.leagueLengths, [10, 20], 'Should resolve custom leagueLengths from game');
+    });
   });
 });

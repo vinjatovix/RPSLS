@@ -1,14 +1,12 @@
-import { GAME_CONFIG } from "../config/gameConfig.js";
-
 export class MatchManager {
   constructor({ game, eventBus, options, startLevel }) {
     this.game = game;
     this.eventBus = eventBus;
     this.options = options;
 
-    this.timeLeft = GAME_CONFIG.meta.initialTimeLeftMs;
+    this.timeLeft = this.game.config.meta.initialTimeLeftMs;
     this.match = this.game.mode.kind === "level" ? startLevel : 0;
-    this.enemyGroupCount = Math.max(1, Math.floor(this.match / GAME_CONFIG.meta.enemiesPerLevel));
+    this.enemyGroupCount = Math.max(1, Math.floor(this.match / this.game.config.meta.enemiesPerLevel));
 
     this.gameTime = 0;
     this.lastMechanicTimeless = null;
@@ -32,11 +30,11 @@ export class MatchManager {
   startMatch() {
     this.options.setMechanic("timeless", true);
     this.options.setMechanic("capture", this.game.mode.capture);
-    this.enemyGroupCount = Math.max(1, Math.floor(this.match / GAME_CONFIG.meta.enemiesPerLevel));
+    this.enemyGroupCount = Math.max(1, Math.floor(this.match / this.game.config.meta.enemiesPerLevel));
 
     this.timeLeft = Math.min(
-      GAME_CONFIG.mechanics.matchTimeMaxMs,
-      GAME_CONFIG.mechanics.matchTimeBaseMs + this.match * GAME_CONFIG.mechanics.matchTimeGrowthMs
+      this.game.config.mechanics.matchTimeMaxMs,
+      this.game.config.mechanics.matchTimeBaseMs + this.match * this.game.config.mechanics.matchTimeGrowthMs
     );
 
     this.timeSinceLastAction = 0;
@@ -87,7 +85,7 @@ export class MatchManager {
     const unique = [...new Set(alive)];
 
     this.timeSinceLastAction += deltaTime;
-    const isStalled = this.timeSinceLastAction > GAME_CONFIG.meta.stallTimeoutMs && unique.length > 2;
+    const isStalled = this.timeSinceLastAction > this.game.config.meta.stallTimeoutMs && unique.length > 2;
     const shouldBeTimeless = unique.length > 3 && !isStalled;
 
     if (this.options.mechanics.timeless !== shouldBeTimeless) {
@@ -95,7 +93,7 @@ export class MatchManager {
     }
 
     if (isStalled) {
-      this.timeLeft = Math.min(this.timeLeft, GAME_CONFIG.meta.stallCountdownMs);
+      this.timeLeft = Math.min(this.timeLeft, this.game.config.meta.stallCountdownMs);
     }
 
     if (!this.options.mechanics.timeless) {

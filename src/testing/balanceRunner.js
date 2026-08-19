@@ -1,6 +1,6 @@
-import { Game } from "../index.js";
 import { RACE_STATS } from "../config/gameConfig.js";
 import { Random } from "../core/index.js";
+import { Game } from "../index.js";
 
 export const TEAMS = Object.keys(RACE_STATS);
 export const BUCKET_SIZE = 25;
@@ -127,8 +127,11 @@ function getAliveTeams(game) {
   return [...new Set(game.enemies.filter(enemy => !enemy.dead).map(enemy => enemy.team))];
 }
 
-function createGameInstance({ capture, powerups }) {
-  const game = new Game({ startLevel: 0, mode: capture ? "infinite-capture" : "infinite-death" });
+function createGameInstance({ capture, powerups, config, raceStats }) {
+  const options = { startLevel: 0, mode: capture ? "infinite-capture" : "infinite-death" };
+  if (config) options.config = config;
+  if (raceStats) options.raceStats = raceStats;
+  const game = new Game(options);
   game.progressManager.reset();
   game.progressManager.selectTeam("rocks");
   game.progressManager.awardCredits = () => {};
@@ -138,6 +141,7 @@ function createGameInstance({ capture, powerups }) {
   if (!powerups) {
     game.powerupTimer = Infinity;
   }
+
   return game;
 }
 
@@ -231,7 +235,9 @@ export async function runCampaign({
   capture = false,
   powerups = false,
   onProgress = null,
-  seed = null
+  seed = null,
+  config = null,
+  raceStats = null
 } = {}) {
   if (isCampaignRunning) {
     throw new Error(
@@ -250,7 +256,7 @@ export async function runCampaign({
       Random.setSeed(seed);
     }
 
-    const game = createGameInstance({ capture, powerups });
+    const game = createGameInstance({ capture, powerups, config, raceStats });
     const bucketCount = Math.max(1, Math.ceil(maxLevel / BUCKET_SIZE));
     const stats = createInitialStats(bucketCount);
     const unsubscribe = subscribeToGameEvents(game, stats, bucketCount);

@@ -7,7 +7,6 @@ const LABEL_COLUMN_WIDTH = 35;
 const TEAM_COLUMN_WIDTH = 10;
 
 const TEAM_NAMES = Object.keys(RACE_STATS);
-const baseRaceStatsBackup = JSON.parse(JSON.stringify(RACE_STATS));
 
 function parseArguments() {
   const runsArg = process.argv[2];
@@ -60,20 +59,13 @@ function applyConfigurationPatch(target, patch) {
   }
 }
 
-function restoreBaseConfiguration() {
-  for (const teamName of TEAM_NAMES) {
-    const originalTeamStats = JSON.parse(JSON.stringify(baseRaceStatsBackup[teamName]));
-    applyConfigurationPatch(RACE_STATS[teamName], originalTeamStats);
-  }
-}
-
-async function simulateCampaignBatch(campaignCount, maxLevel) {
+async function simulateCampaignBatch(campaignCount, maxLevel, raceStats) {
  // WARNING: runCampaign synchronously mutates the global 'Random' Singleton.
  // Campaigns must be executed in strictly SEQUENTIAL order.
  // Do NOT use Promise.all or Node threading parallelism at this level.
   const campaignResults = [];
   for (let i = 0; i < campaignCount; i++) {
-    const runResult = await runCampaign({ maxLevel, deltaTime: TICK_MS });
+    const runResult = await runCampaign({ maxLevel, deltaTime: TICK_MS, raceStats });
     campaignResults.push(runResult);
   }
 
@@ -114,16 +106,17 @@ async function executeComboSuite() {
   console.log("-".repeat(LABEL_COLUMN_WIDTH + 1 + TEAM_NAMES.length * TEAM_COLUMN_WIDTH));
 
   for (const comboPatch of combos) {
+    const clonedRaceStats = JSON.parse(JSON.stringify(RACE_STATS));
     for (const [teamName, teamPatch] of Object.entries(comboPatch)) {
       if (!TEAM_NAMES.includes(teamName)) {
         console.error(`Error: Invalid team name "${teamName}" in configuration patch.`);
         console.error(`Allowed team names are: ${TEAM_NAMES.join(", ")}`);
         process.exit(1);
       }
-      applyConfigurationPatch(RACE_STATS[teamName], teamPatch);
+      applyConfigurationPatch(clonedRaceStats[teamName], teamPatch);
     }
 
-    const aggregatedResults = await simulateCampaignBatch(runs, levels);
+    const aggregatedResults = await simulateCampaignBatch(runs, levels, clonedRaceStats);
 
     const label = buildComboLabel(comboPatch);
     const winRateColumns = TEAM_NAMES.map(teamName => {
@@ -133,8 +126,6 @@ async function executeComboSuite() {
     }).join("");
 
     console.log(`${label.padEnd(LABEL_COLUMN_WIDTH)} ${winRateColumns}`);
-
-    restoreBaseConfiguration();
   }
   console.log("");
 }

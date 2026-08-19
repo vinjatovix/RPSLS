@@ -5,7 +5,6 @@ export class GameSettings {
     this.inputHandler = inputHandler;
     this.storageAdapter = storageAdapter;
 
-    // Copy initial config (avoid mutating the frozen config)
     this.display = clone(gameConfig.display);
     this.mechanics = clone(gameConfig.mechanics);
     this.effects = clone(gameConfig.effects);

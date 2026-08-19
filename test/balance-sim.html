@@ -449,12 +449,13 @@
         target[last] = value;
       }
 
-      async function runShort(runs, levels, deltaTime, onProgress) {
+      async function runShort(runs, levels, deltaTime, onProgress, config = null, raceStats = null) {
         const results = [];
         for (let i = 0; i < runs; i++) {
-          results.push(await runCampaign({ maxLevel: levels, deltaTime, onProgress }));
+          results.push(await runCampaign({ maxLevel: levels, deltaTime, onProgress, config, raceStats }));
           if (cancelRequested) break;
         }
+
         return results.length ? aggregateRuns(results) : null;
       }
 
@@ -487,16 +488,9 @@
         if (!base) {
           statusElement.textContent = "Cancelled";
           setBusy(false);
+
           return;
         }
-
-        const baseline = {};
-        for (const team of TEAMS)
-          for (const [name, path] of SWEEP_STAT_PATHS)
-            baseline[`${team}.${path}`] = readPath(RACE_STATS[team], path);
-        const timerBase = GAME_CONFIG.mechanics.matchTimeBaseMs;
-        const timerGrowth = GAME_CONFIG.mechanics.matchTimeGrowthMs;
-        const dangerBase = GAME_CONFIG.mechanics.ai.dangerRadius;
 
         const configs = [];
         for (const team of TEAMS)
@@ -512,31 +506,33 @@
           statusElement.textContent = `Sweep ${i + 1}/${configs.length} · ${labelOf(config)}`;
           progressElement.value = (i / configs.length) * 100;
 
+          const perturbedConfig = structuredClone(GAME_CONFIG);
+          const perturbedRaceStats = structuredClone(RACE_STATS);
+
           if (config.timer === "base") {
-            GAME_CONFIG.mechanics.matchTimeBaseMs = Math.max(1000, timerBase * (1 + (config.direction * percent) / 100));
+            perturbedConfig.mechanics.matchTimeBaseMs = Math.max(1000, GAME_CONFIG.mechanics.matchTimeBaseMs * (1 + (config.direction * percent) / 100));
           } else if (config.timer === "growth") {
-            GAME_CONFIG.mechanics.matchTimeGrowthMs = Math.max(0, timerGrowth * (1 + (config.direction * percent) / 100));
+            perturbedConfig.mechanics.matchTimeGrowthMs = Math.max(0, GAME_CONFIG.mechanics.matchTimeGrowthMs * (1 + (config.direction * percent) / 100));
           } else if (config.ai === "dangerRadius") {
-            GAME_CONFIG.mechanics.ai.dangerRadius = Math.max(20, dangerBase * (1 + (config.direction * percent) / 100));
+            perturbedConfig.mechanics.ai.dangerRadius = Math.max(20, GAME_CONFIG.mechanics.ai.dangerRadius * (1 + (config.direction * percent) / 100));
           } else {
-            const current = readPath(RACE_STATS[config.team], config.path);
-            writePath(RACE_STATS[config.team], config.path, Math.max(Math.abs(current) * 0.01, current * (1 + (config.direction * percent) / 100)));
+            const current = readPath(perturbedRaceStats[config.team], config.path);
+            writePath(perturbedRaceStats[config.team], config.path, Math.max(Math.abs(current) * 0.01, current * (1 + (config.direction * percent) / 100)));
           }
 
-          let rates = null;
-          try {
-            const aggregate = await runShort(runs, levels, deltaTime, ({ match }) => {
+          const aggregate = await runShort(
+            runs,
+            levels,
+            deltaTime,
+            ({ match }) => {
               if (cancelRequested) return true;
               statusElement.textContent = `Sweep ${i + 1}/${configs.length} · ${labelOf(config)} · level ${match}`;
               return false;
-            });
-            rates = winRates(aggregate);
-          } finally {
-            if (config.timer === "base") GAME_CONFIG.mechanics.matchTimeBaseMs = timerBase;
-            else if (config.timer === "growth") GAME_CONFIG.mechanics.matchTimeGrowthMs = timerGrowth;
-            else if (config.ai === "dangerRadius") GAME_CONFIG.mechanics.ai.dangerRadius = dangerBase;
-            else writePath(RACE_STATS[config.team], config.path, baseline[`${config.team}.${config.path}`]);
-          }
+            },
+            perturbedConfig,
+            perturbedRaceStats
+          );
+          const rates = winRates(aggregate);
 
           if (rates) rows.push({ config, rates, base });
         }

@@ -1,16 +1,19 @@
-import { RACE_STATS } from "../config/gameConfig.js";
 import { clone } from "../core/index.js";
 
 export class ScoreManager {
-  constructor({ eventBus = null } = {}) {
+  constructor({ eventBus = null, raceStats } = {}) {
+    if (!raceStats) {
+      throw new TypeError("raceStats is required");
+    }
     this.eventBus = eventBus;
+    this.raceStats = raceStats;
     this.initialValues = { kills: 0, deaths: 0, score: 0, ratio: 0 };
 
     this.teams = {};
-    for (const team of Object.keys(RACE_STATS)) {
+    for (const team of Object.keys(this.raceStats)) {
       this.teams[team] = { 
-        emoji: RACE_STATS[team].emoji, 
-        name: RACE_STATS[team].team, 
+        emoji: this.raceStats[team].emoji, 
+        name: this.raceStats[team].team, 
         ...clone(this.initialValues) 
       };
     }
@@ -62,6 +65,7 @@ export class ScoreManager {
 
   isMvp(team) {
     const maxKills = Math.max(...Object.values(this.teams).map(t => t.kills));
+
     return maxKills > 0 && this.teams[team]?.kills === maxKills;
   }
 
@@ -75,6 +79,7 @@ export class ScoreManager {
       if (first.score !== second.score) return second.score - first.score;
       if (first.ratio !== second.ratio) return second.ratio - first.ratio;
       if (first.kills !== second.kills) return second.kills - first.kills;
+
       return second.deaths - first.deaths;
     });
   }

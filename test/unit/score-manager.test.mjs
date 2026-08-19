@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
+import { RACE_STATS } from "../../src/config/gameConfig.js";
 import { ScoreManager } from "../../src/scoring/ScoreManager.js";
 import { FakeEventBus } from "../doubles/FakeEventBus.mjs";
 
 test("ScoreManager: initialization sets correct default team structure", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
   const teamKeys = Object.keys(scoreManager.teams);
 
   assert.ok(teamKeys.length > 0);
@@ -23,7 +24,7 @@ test("ScoreManager: initialization sets correct default team structure", () => {
 });
 
 test("ScoreManager: recordKill increments kills for the killer", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.recordKill("rocks", "scissors");
 
@@ -31,7 +32,7 @@ test("ScoreManager: recordKill increments kills for the killer", () => {
 });
 
 test("ScoreManager: recordKill increments deaths for the victim", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.recordKill("rocks", "scissors");
 
@@ -39,7 +40,7 @@ test("ScoreManager: recordKill increments deaths for the victim", () => {
 });
 
 test("ScoreManager: recordKill computes ratio as total kills when there are no deaths", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.recordKill("rocks", "scissors");
 
@@ -47,7 +48,7 @@ test("ScoreManager: recordKill computes ratio as total kills when there are no d
 });
 
 test("ScoreManager: recordKill computes ratio as kills divided by deaths when deaths is greater than zero", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.recordKill("rocks", "scissors");
   scoreManager.recordKill("scissors", "papers");
@@ -57,7 +58,7 @@ test("ScoreManager: recordKill computes ratio as kills divided by deaths when de
 });
 
 test("ScoreManager: recordKill handles invalid team names gracefully", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.recordKill("invalidTeamA", "rocks");
   assert.equal(scoreManager.getTeam("rocks").deaths, 0);
@@ -68,7 +69,7 @@ test("ScoreManager: recordKill handles invalid team names gracefully", () => {
 
 test("ScoreManager: recordKill emits kill event with correct payload", () => {
   const eventBus = new FakeEventBus();
-  const scoreManager = new ScoreManager({ eventBus });
+  const scoreManager = new ScoreManager({ eventBus, raceStats: RACE_STATS });
 
   scoreManager.recordKill("rocks", "scissors");
 
@@ -80,7 +81,7 @@ test("ScoreManager: recordKill emits kill event with correct payload", () => {
 
 test("ScoreManager: recordKill emits score:update event", () => {
   const eventBus = new FakeEventBus();
-  const scoreManager = new ScoreManager({ eventBus });
+  const scoreManager = new ScoreManager({ eventBus, raceStats: RACE_STATS });
 
   scoreManager.recordKill("rocks", "scissors");
 
@@ -90,7 +91,7 @@ test("ScoreManager: recordKill emits score:update event", () => {
 });
 
 test("ScoreManager: addWin increments team score", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.addWin("rocks");
 
@@ -99,7 +100,7 @@ test("ScoreManager: addWin increments team score", () => {
 
 test("ScoreManager: addWin emits match-win event with correct payload and MVP status", () => {
   const eventBus = new FakeEventBus();
-  const scoreManager = new ScoreManager({ eventBus });
+  const scoreManager = new ScoreManager({ eventBus, raceStats: RACE_STATS });
 
   scoreManager.recordKill("rocks", "scissors");
   scoreManager.addWin("rocks", { match: 5 });
@@ -116,7 +117,7 @@ test("ScoreManager: addWin emits match-win event with correct payload and MVP st
 
 test("ScoreManager: addWin emits score:update event", () => {
   const eventBus = new FakeEventBus();
-  const scoreManager = new ScoreManager({ eventBus });
+  const scoreManager = new ScoreManager({ eventBus, raceStats: RACE_STATS });
 
   scoreManager.addWin("rocks");
 
@@ -126,13 +127,13 @@ test("ScoreManager: addWin emits score:update event", () => {
 });
 
 test("ScoreManager: isMvp returns false when no kills are recorded", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   assert.equal(scoreManager.isMvp("rocks"), false);
 });
 
 test("ScoreManager: isMvp returns true for the team with the most kills", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.recordKill("rocks", "scissors");
 
@@ -140,7 +141,7 @@ test("ScoreManager: isMvp returns true for the team with the most kills", () => 
 });
 
 test("ScoreManager: isMvp returns false for a team that is not the top killer", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.recordKill("rocks", "scissors");
   scoreManager.recordKill("scissors", "papers");
@@ -150,7 +151,7 @@ test("ScoreManager: isMvp returns false for a team that is not the top killer", 
 });
 
 test("ScoreManager: getRanking sorts primarily by score descending", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.addWin("rocks");
   scoreManager.addWin("rocks");
@@ -163,7 +164,7 @@ test("ScoreManager: getRanking sorts primarily by score descending", () => {
 });
 
 test("ScoreManager: getRanking sorts by ratio descending as a first tie-breaker", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.addWin("rocks");
   scoreManager.recordKill("rocks", "scissors");
@@ -179,7 +180,7 @@ test("ScoreManager: getRanking sorts by ratio descending as a first tie-breaker"
 });
 
 test("ScoreManager: getRanking sorts by kills descending as a second tie-breaker", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.addWin("rocks");
   scoreManager.recordKill("spocks", "rocks");
@@ -198,7 +199,7 @@ test("ScoreManager: getRanking sorts by kills descending as a second tie-breaker
 });
 
 test("ScoreManager: getRanking sorts by deaths descending as a third tie-breaker", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.recordKill("rocks", "scissors");
   scoreManager.recordKill("rocks", "scissors");
@@ -214,7 +215,7 @@ test("ScoreManager: getRanking sorts by deaths descending as a third tie-breaker
 });
 
 test("ScoreManager: reset restores all team statistics to their initial values", () => {
-  const scoreManager = new ScoreManager();
+  const scoreManager = new ScoreManager({ raceStats: RACE_STATS });
 
   scoreManager.addWin("rocks");
   scoreManager.recordKill("rocks", "scissors");
@@ -230,7 +231,7 @@ test("ScoreManager: reset restores all team statistics to their initial values",
 
 test("ScoreManager: increments winner score when handling game:match-resolved", () => {
   const eventBus = new FakeEventBus();
-  const scoreManager = new ScoreManager({ eventBus });
+  const scoreManager = new ScoreManager({ eventBus, raceStats: RACE_STATS });
 
   eventBus.emit("game:match-resolved", { winner: "rocks", match: 1 });
 
@@ -239,9 +240,39 @@ test("ScoreManager: increments winner score when handling game:match-resolved", 
 
 test("ScoreManager: does not increment score when game:match-resolved is a DRAW", () => {
   const eventBus = new FakeEventBus();
-  const scoreManager = new ScoreManager({ eventBus });
+  const scoreManager = new ScoreManager({ eventBus, raceStats: RACE_STATS });
 
   eventBus.emit("game:match-resolved", { winner: "DRAW", match: 1 });
 
   assert.equal(scoreManager.getTeam("rocks").score, 0);
+});
+
+test("ScoreManager: works correctly with customized raceStats (e.g. customized emojis and altered team names)", () => {
+  const customRaceStats = {
+    aliens: { team: "aliens", emoji: "👽", aim: ["zombies"] },
+    zombies: { team: "zombies", emoji: "🧟", aim: ["aliens"] }
+  };
+
+  const scoreManager = new ScoreManager({ raceStats: customRaceStats });
+  const teamKeys = Object.keys(scoreManager.teams);
+  const aliensTeam = scoreManager.getTeam("aliens");
+
+  assert.deepEqual(teamKeys, ["aliens", "zombies"]);
+  assert.equal(aliensTeam.emoji, "👽");
+  assert.equal(aliensTeam.name, "aliens");
+});
+
+test("ScoreManager: records kills correctly with customized raceStats", () => {
+  const customRaceStats = {
+    aliens: { team: "aliens", emoji: "👽", aim: ["zombies"] },
+    zombies: { team: "zombies", emoji: "🧟", aim: ["aliens"] }
+  };
+  const scoreManager = new ScoreManager({ raceStats: customRaceStats });
+
+  scoreManager.recordKill("aliens", "zombies");
+
+  const aliensKills = scoreManager.getTeam("aliens").kills;
+  const zombiesDeaths = scoreManager.getTeam("zombies").deaths;
+  assert.equal(aliensKills, 1);
+  assert.equal(zombiesDeaths, 1);
 });

@@ -1,14 +1,20 @@
-import { UPGRADES, RACE_STATS } from "../config/gameConfig.js";
-
 export class MetaPanel {
   #state = {
     selectedTeam: null,
     credits: 0
   };
 
-  constructor({ progressManager, eventBus }) {
+  constructor({ progressManager, eventBus, raceStats, upgrades }) {
+    if (!raceStats) {
+      throw new TypeError("raceStats is required");
+    }
+    if (!upgrades) {
+      throw new TypeError("upgrades is required");
+    }
     this.progressManager = progressManager;
     this.eventBus = eventBus;
+    this.raceStats = raceStats;
+    this.upgrades = upgrades;
     this.shopListElement = document.getElementById("shop-list");
     this.creditsElement = document.getElementById("credits");
 
@@ -62,12 +68,12 @@ export class MetaPanel {
 
     this.shopListElement.innerHTML = "";
 
-    const perRace = Object.entries(UPGRADES).filter(([, config]) => config.perRace);
-    const globalUpgrades = Object.entries(UPGRADES).filter(([, config]) => !config.perRace);
+    const perRace = Object.entries(this.upgrades).filter(([, config]) => config.perRace);
+    const globalUpgrades = Object.entries(this.upgrades).filter(([, config]) => !config.perRace);
 
     const raceHeader = document.createElement("div");
     raceHeader.className = "shop-section-title";
-    raceHeader.textContent = `${RACE_STATS[selected].emoji} ${selected}`;
+    raceHeader.textContent = `${this.raceStats[selected].emoji} ${selected}`;
     this.shopListElement.appendChild(raceHeader);
 
     perRace.forEach(([key, config]) => {

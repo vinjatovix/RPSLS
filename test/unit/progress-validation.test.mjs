@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { UPGRADES } from "../../src/config/gameConfig.js";
+import { RACE_STATS, UPGRADES } from "../../src/config/gameConfig.js";
 import { ProgressManager } from "../../src/meta/ProgressManager.js";
 import { FakeEventBus } from "../doubles/FakeEventBus.mjs";
 
 function makeProgress() {
-  const progressManager = new ProgressManager({ eventBus: new FakeEventBus() });
+  const progressManager = new ProgressManager({ eventBus: new FakeEventBus(), raceStats: RACE_STATS, upgrades: UPGRADES });
 
   progressManager.reset();
   progressManager.selectTeam("rocks");
@@ -184,4 +184,51 @@ test("progress: reset clears all credits, upgrades, and team selection", () => {
   assert.equal(progressManager.teamChosen, false);
   assert.equal(progressManager.selectedTeam, "rocks");
   assert.equal(progressManager.getPowerupLuck(), defaultLuckMultiplier);
+});
+
+test("progress: dynamic upgrades use custom prices and configs when injected", () => {
+  const customUpgrades = {
+    customLuck: {
+      label: "Custom Luck",
+      emoji: "🍀",
+      description: "Increase powerup luck custom",
+      baseCost: 10,
+      costGrowth: 1.5,
+      perRace: false
+    },
+    customSpeed: {
+      label: "Custom Speed Upgrade",
+      emoji: "⚡",
+      description: "Increase team speed custom",
+      baseCost: 25,
+      costGrowth: 2.0,
+      perRace: true
+    }
+  };
+  const eventBus = new FakeEventBus();
+  const progressManager = new ProgressManager({
+    eventBus,
+    raceStats: RACE_STATS,
+    upgrades: customUpgrades
+  });
+  progressManager.selectTeam("rocks");
+
+  // Verify custom upgrades are initialized
+  assert.equal(progressManager.getUpgradeLevel("customLuck"), 0);
+  assert.equal(progressManager.getUpgradeCost("customLuck"), 10);
+
+  // Award credits and purchase custom luck
+  progressManager.awardCredits(100);
+  const purchaseSuccess = progressManager.buyUpgrade("customLuck");
+  assert.ok(purchaseSuccess);
+  assert.equal(progressManager.getUpgradeLevel("customLuck"), 1);
+  assert.equal(progressManager.getUpgradeCost("customLuck"), 15); // Math.floor(10 * 1.5)
+  assert.equal(progressManager.credits, 100 - 10);
+
+  // Test per race upgrade costing
+  assert.equal(progressManager.getUpgradeLevel("customSpeed", "rocks"), 0);
+  assert.equal(progressManager.getUpgradeCost("customSpeed", "rocks"), 25);
+  progressManager.buyUpgrade("customSpeed", "rocks");
+  assert.equal(progressManager.getUpgradeLevel("customSpeed", "rocks"), 1);
+  assert.equal(progressManager.getUpgradeCost("customSpeed", "rocks"), 50); // Math.floor(25 * 2.0)
 });

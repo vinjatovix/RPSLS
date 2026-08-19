@@ -1,9 +1,10 @@
 import "./dom-stub.js";
 import { TICK_MS } from "./doubles/setupSimulationContext.mjs";
 
+const { RACE_STATS, GAME_CONFIG } = await import("../src/config/gameConfig.js");
+const { clone } = await import("../src/core/index.js");
 const { runCampaign, aggregateRuns, formatReport } = await import("../src/testing/balanceRunner.js");
 const { runMatchupSim, formatMatchupReport } = await import("../src/testing/matchupSim.js");
-const { RACE_STATS, GAME_CONFIG } = await import("../src/config/gameConfig.js");
 
 const TEAMS = Object.keys(RACE_STATS);
 
@@ -39,10 +40,10 @@ function labelOf(config) {
   return `${config.team}.${config.name} ${config.direction > 0 ? "+" : ""}${config.direction * config.percent}%`;
 }
 
-async function runShort(runs, levels, deltaTime) {
+async function runShort(runs, levels, deltaTime, config = null, raceStats = null) {
   const results = [];
   for (let i = 0; i < runs; i++) {
-    results.push(await runCampaign({ maxLevel: levels, deltaTime }));
+    results.push(await runCampaign({ maxLevel: levels, deltaTime, config, raceStats }));
   }
 
   return results.length ? aggregateRuns(results) : null;
@@ -63,22 +64,6 @@ function statPathOf(name) {
   const hit = SWEEP_STAT_PATHS.find(([n]) => n === name);
 
   return hit ? hit[1] : name;
-}
-
-function captureBaselineState() {
-  const raceStats = {};
-  for (const team of TEAMS) {
-    for (const [, path] of SWEEP_STAT_PATHS) {
-      raceStats[`${team}.${path}`] = readPath(RACE_STATS[team], path);
-    }
-  }
-
-  return {
-    raceStats,
-    timerBase: GAME_CONFIG.mechanics.matchTimeBaseMs,
-    timerGrowth: GAME_CONFIG.mechanics.matchTimeGrowthMs,
-    dangerBase: GAME_CONFIG.mechanics.ai.dangerRadius
-  };
 }
 
 function generateSweepConfigs(percent) {
@@ -118,34 +103,26 @@ function generateFocusConfigs(paths, percent) {
   return configs;
 }
 
-function applyPerturbation(config, baseline) {
+function applyPerturbation(config) {
+  const perturbedConfig = clone(GAME_CONFIG);
+  const perturbedRaceStats = clone(RACE_STATS);
+
   const { direction, percent } = config;
   const factor = 1 + (direction * percent) / 100;
 
   if (config.timer === "base") {
-    GAME_CONFIG.mechanics.matchTimeBaseMs = Math.max(1000, baseline.timerBase * factor);
+    perturbedConfig.mechanics.matchTimeBaseMs = Math.max(1000, GAME_CONFIG.mechanics.matchTimeBaseMs * factor);
   } else if (config.timer === "growth") {
-    GAME_CONFIG.mechanics.matchTimeGrowthMs = Math.max(0, baseline.timerGrowth * factor);
+    perturbedConfig.mechanics.matchTimeGrowthMs = Math.max(0, GAME_CONFIG.mechanics.matchTimeGrowthMs * factor);
   } else if (config.ai === "dangerRadius") {
-    GAME_CONFIG.mechanics.ai.dangerRadius = Math.max(20, baseline.dangerBase * factor);
+    perturbedConfig.mechanics.ai.dangerRadius = Math.max(20, GAME_CONFIG.mechanics.ai.dangerRadius * factor);
   } else {
-    const current = readPath(RACE_STATS[config.team], config.path);
+    const current = readPath(perturbedRaceStats[config.team], config.path);
     const value = Math.max(Math.abs(current) * 0.01, current * factor);
-    writePath(RACE_STATS[config.team], config.path, value);
+    writePath(perturbedRaceStats[config.team], config.path, value);
   }
-}
 
-function restorePerturbation(config, baseline) {
-  if (config.timer === "base") {
-    GAME_CONFIG.mechanics.matchTimeBaseMs = baseline.timerBase;
-  } else if (config.timer === "growth") {
-    GAME_CONFIG.mechanics.matchTimeGrowthMs = baseline.timerGrowth;
-  } else if (config.ai === "dangerRadius") {
-    GAME_CONFIG.mechanics.ai.dangerRadius = baseline.dangerBase;
-  } else {
-    const originalValue = baseline.raceStats[`${config.team}.${config.path}`];
-    writePath(RACE_STATS[config.team], config.path, originalValue);
-  }
+  return { perturbedConfig, perturbedRaceStats };
 }
 
 async function runSweep(runs, levels, deltaTime, percent) {
@@ -153,7 +130,6 @@ async function runSweep(runs, levels, deltaTime, percent) {
   const startTime = Date.now();
   const base = winRates(await runShort(runs, levels, deltaTime));
 
-  const baseline = captureBaselineState();
   const configs = generateSweepConfigs(percent);
   const rows = [];
 
@@ -164,9 +140,8 @@ async function runSweep(runs, levels, deltaTime, percent) {
       `[sweep] ${ci + 1}/${configs.length} ${labelOf(config)} (${elapsedSeconds}s)\n`
     );
 
-    applyPerturbation(config, baseline);
-    const rates = winRates(await runShort(runs, levels, deltaTime));
-    restorePerturbation(config, baseline);
+    const { perturbedConfig, perturbedRaceStats } = applyPerturbation(config);
+    const rates = winRates(await runShort(runs, levels, deltaTime, perturbedConfig, perturbedRaceStats));
 
     rows.push({ config, rates, base });
   }
@@ -179,7 +154,6 @@ async function runFocus(paths, runs, levels, deltaTime, percent) {
   const startTime = Date.now();
   const base = winRates(await runShort(runs, levels, deltaTime));
 
-  const baseline = captureBaselineState();
   const configs = generateFocusConfigs(paths, percent);
   const rows = [];
 
@@ -190,9 +164,8 @@ async function runFocus(paths, runs, levels, deltaTime, percent) {
       `[focus] ${ci + 1}/${configs.length} ${labelOf(config)} (${elapsedSeconds}s)\n`
     );
 
-    applyPerturbation(config, baseline);
-    const rates = winRates(await runShort(runs, levels, deltaTime));
-    restorePerturbation(config, baseline);
+    const { perturbedConfig, perturbedRaceStats } = applyPerturbation(config);
+    const rates = winRates(await runShort(runs, levels, deltaTime, perturbedConfig, perturbedRaceStats));
 
     rows.push({ config, rates, base });
   }

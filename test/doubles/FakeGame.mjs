@@ -1,9 +1,22 @@
+import { GAME_CONFIG, GAME_MODES, LEAGUE_LENGTHS, POWERUP_TYPES, RACE_STATS, UPGRADES } from "../../src/config/gameConfig.js";
 import { CollisionDetector } from "../../src/canvas/index.js";
 import { ScoreManager } from "../../src/scoring/ScoreManager.js";
 import { FakeEventBus } from "./FakeEventBus.mjs";
 
 export class FakeGame {
   constructor({ width = 600, height = 400 } = {}) {
+    this.config = GAME_CONFIG;
+    this.raceStats = RACE_STATS;
+    this.upgrades = UPGRADES;
+    this.powerupTypes = POWERUP_TYPES;
+    this.gameModes = GAME_MODES;
+    this.leagueLengths = LEAGUE_LENGTHS;
+    this.predators = {};
+    for (const team of Object.keys(this.raceStats)) {
+      this.predators[team] = Object.keys(this.raceStats).filter(
+        predator => this.raceStats[predator].aim.includes(team)
+      );
+    }
     this.eventBus = new FakeEventBus();
     this.activeTeams = new Set();
     this.width = width;
@@ -71,7 +84,7 @@ export class FakeGame {
       match: 1
     };
 
-    this.scoreManager = new ScoreManager({ eventBus: this.eventBus });
+    this.scoreManager = new ScoreManager({ eventBus: this.eventBus, raceStats: this.raceStats });
 
     this.particles = {
       particles: [],

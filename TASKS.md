@@ -9,7 +9,6 @@
 *(Planned technical improvements and features)*
 
 ### 🛠️ Refactoring (Technical Debt)
-- [ ] 🔥 **[TODO - PRIORITY]** Spec #19: Decouple Global Config via Dependency Injection (`docs/specs/spec_19_decouple_global_config_injection.md`)
 - [ ] 🔥 **[TODO - PRIORITY]** Spec #20: Separate Game Module from Browser Bootstrap (`docs/specs/spec_20_separate_game_module_from_browser_bootstrap.md`)
 - [ ] **[TODO]** Spec #3: Particle Object Pooling (`docs/specs/spec_03_particle_object_pooling.md`)
 - [ ] **[TODO]** Spec #4: Canvas Rendering Optimization (`docs/specs/spec_04_canvas_rendering_optimization.md`)
@@ -35,3 +34,4 @@
 - [x] **[DONE]** Spec #12: Test Infrastructure & Strategy Improvements (`docs/specs/spec_12_test_infrastructure.md`)
 - [x] **[DONE]** Spec #14: EntityManager Extraction (`docs/specs/spec_14_entity_manager.md`)
 - [x] **[DONE]** Spec #15: MatchManager Extraction (`docs/specs/spec_15_match_manager.md`)
+- [x] **[DONE]** Spec #19: Decouple Global Config via Dependency Injection (`docs/specs/spec_19_decouple_global_config_injection.md`)
