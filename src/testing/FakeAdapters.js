@@ -120,12 +120,50 @@ export class FakeLocalStorageAdapter {
 
   load(key = this.defaultKey) {
     const data = this.store.get(key);
+    if (!data) {
+      return null;
+    }
 
-    return data ? JSON.parse(data) : null;
+    return JSON.parse(data);
   }
 
   clear(key = this.defaultKey) {
     this.store.delete(key);
+  }
+
+  exportSave() {
+    const activeGameState = this.load("active-game-state");
+    const gameProgress = this.load("game-progress");
+
+    const bundle = {
+      activeGameState,
+      gameProgress
+    };
+
+    return JSON.stringify(bundle);
+  }
+
+  importSave(fileContent) {
+    if (!fileContent) {
+      throw new Error("No file content provided");
+    }
+
+    const bundle = JSON.parse(fileContent);
+    const { activeGameState, gameProgress } = bundle;
+
+    if (activeGameState) {
+      this.save(activeGameState, "active-game-state");
+    } else {
+      this.clear("active-game-state");
+    }
+
+    if (gameProgress) {
+      this.save(gameProgress, "game-progress");
+    } else {
+      this.clear("game-progress");
+    }
+
+    return true;
   }
 }
 

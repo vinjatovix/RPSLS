@@ -75,7 +75,8 @@ class Game {
     this.progressManager = new ProgressManager({
       eventBus: this.eventBus,
       raceStats: this.raceStats,
-      upgrades: this.upgrades
+      upgrades: this.upgrades,
+      storageAdapter: this.storageAdapter
     });
     if (team && this.raceStats[team]) {
       this.progressManager.selectTeam(team);
@@ -104,6 +105,14 @@ class Game {
       startLevel
     });
 
+    this.leagueSeed = (Date.now() ^ 0x99999999) | 0;
+
+    if (team === null && startLevel === 0) {
+      this.loadGameState();
+    } else {
+      this.clearGameState();
+    }
+
     this.eventBus.subscribe("game:match-start", ({ matchNumber }) => {
       const enemyGroupCount = Math.max(1, Math.floor(matchNumber / this.config.meta.enemiesPerLevel));
       this.entityManager.spawnMatch(enemyGroupCount);
@@ -111,6 +120,7 @@ class Game {
 
     this.eventBus.subscribe("game:league-ended", () => {
       this.matchManager.paused = true;
+      this.clearGameState();
       const ranking = this.scoreManager.sortRanking(
         Object.entries(this.scoreManager.teams).map(([name, team]) => ({ name, ...team }))
       );
@@ -137,7 +147,7 @@ class Game {
 
     if (this.progressManager.isTeamChosen()) {
       this.#started = true;
-      if (this.mode.kind === "level") {
+      if (this.mode.kind === "level" || this.matchManager.match > 0) {
         this.matchManager.startMatch();
       } else {
         this.matchManager.nextMatch();
@@ -254,6 +264,103 @@ class Game {
     const deltaTime = this.clock.update();
     this.update(deltaTime);
     this.draw();
+  }
+
+  saveGameState() {
+    const data = {
+      match: this.matchManager.match,
+      teams: this.scoreManager.teams,
+      leagueSeed: this.leagueSeed,
+      leagueLength: this.leagueLength,
+      modeKey: this.modeKey
+    };
+
+    this.storageAdapter.save(data, "active-game-state");
+    this.progressManager.saveProgress();
+  }
+
+  loadGameState() {
+    try {
+      const data = this.storageAdapter.load("active-game-state");
+
+      if (!data) {
+        return;
+      }
+
+      const isLoadedModeKeyValid = typeof data.modeKey === "string" && this.gameModes[data.modeKey];
+      this.modeKey = isLoadedModeKeyValid ? data.modeKey : "infinite-death";
+      this.mode = this.gameModes[this.modeKey];
+
+      const isLoadedLeagueLengthValid = typeof data.leagueLength === "number" && Number.isInteger(data.leagueLength) && data.leagueLength > 0;
+      this.leagueLength = isLoadedLeagueLengthValid ? data.leagueLength : 50;
+
+      const isLoadedMatchValid = typeof data.match === "number" && Number.isInteger(data.match) && data.match >= 0;
+      this.matchManager.match = isLoadedMatchValid ? data.match : 0;
+
+      const isLoadedLeagueSeedValid = typeof data.leagueSeed === "number" && Number.isInteger(data.leagueSeed);
+      this.leagueSeed = isLoadedLeagueSeedValid ? data.leagueSeed : (Date.now() ^ 0x99999999) | 0;
+
+      const isLoadedTeamsObjectValid = data.teams && typeof data.teams === "object" && !Array.isArray(data.teams);
+      if (isLoadedTeamsObjectValid) {
+        for (const team of Object.keys(this.raceStats)) {
+          const loadedTeam = data.teams[team];
+          const isLoadedTeamValid = loadedTeam && typeof loadedTeam === "object" && !Array.isArray(loadedTeam);
+
+          if (isLoadedTeamValid) {
+            const kills = typeof loadedTeam.kills === "number" && Number.isInteger(loadedTeam.kills) && loadedTeam.kills >= 0 ? loadedTeam.kills : 0;
+            const deaths = typeof loadedTeam.deaths === "number" && Number.isInteger(loadedTeam.deaths) && loadedTeam.deaths >= 0 ? loadedTeam.deaths : 0;
+            const score = typeof loadedTeam.score === "number" && Number.isInteger(loadedTeam.score) && loadedTeam.score >= 0 ? loadedTeam.score : 0;
+            const ratio = typeof loadedTeam.ratio === "number" && Number.isFinite(loadedTeam.ratio) && loadedTeam.ratio >= 0 ? loadedTeam.ratio : (deaths > 0 ? kills / deaths : kills);
+            const emoji = typeof loadedTeam.emoji === "string" ? loadedTeam.emoji : (this.raceStats[team].emoji || "");
+            const name = typeof loadedTeam.name === "string" ? loadedTeam.name : (this.raceStats[team].team || team);
+
+            this.scoreManager.teams[team] = { emoji, name, kills, deaths, score, ratio };
+          } else {
+            this.scoreManager.teams[team] = {
+              emoji: this.raceStats[team].emoji || "",
+              name: this.raceStats[team].team || team,
+              kills: 0,
+              deaths: 0,
+              score: 0,
+              ratio: 0
+            };
+          }
+        }
+      } else {
+        throw new TypeError("Invalid or missing teams object in loaded state");
+      }
+
+      if (this.width < this.options.display.maxWidth) {
+        const resizeLevel = this.mode?.kind === "level" ? this.matchManager.match : 1.003 * this.matchManager.match;
+        const { width, height } = this.canvasAdapter.resize(resizeLevel);
+        this.width = width;
+        this.height = height;
+      }
+    } catch (error) {
+      console.warn("The active game state data is corrupt or has been modified without authorization.", error);
+      this.clearGameState();
+
+      this.modeKey = "infinite-death";
+      this.mode = this.gameModes[this.modeKey];
+      this.leagueLength = 50;
+      this.matchManager.match = 0;
+      this.leagueSeed = (Date.now() ^ 0x99999999) | 0;
+
+      for (const team of Object.keys(this.raceStats)) {
+        this.scoreManager.teams[team] = {
+          emoji: this.raceStats[team].emoji || "",
+          name: this.raceStats[team].team || team,
+          kills: 0,
+          deaths: 0,
+          score: 0,
+          ratio: 0
+        };
+      }
+    }
+  }
+
+  clearGameState() {
+    this.storageAdapter.clear("active-game-state");
   }
 }
 

@@ -83,6 +83,7 @@ function createGameInstance({ capture, powerups, config, raceStats }) {
   if (config) options.config = config;
   if (raceStats) options.raceStats = raceStats;
   const game = new Game(options);
+  game.leagueSeed = null;
   game.progressManager.reset();
   game.progressManager.selectTeam("rocks");
   game.progressManager.awardCredits = () => {};

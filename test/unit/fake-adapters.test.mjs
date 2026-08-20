@@ -3,12 +3,15 @@ import { test } from "node:test";
 
 import { FakeCanvasAdapter, FakeInputHandler, FakeLocalStorageAdapter } from "../../src/testing/FakeAdapters.js";
 
-test("FakeCanvasAdapter: default dimensions and resize logic", () => {
+test("FakeCanvasAdapter: starts with default dimensions", () => {
   const adapter = new FakeCanvasAdapter();
 
   assert.strictEqual(adapter.getWidth(), 640);
   assert.strictEqual(adapter.getHeight(), 384);
+});
 
+test("FakeCanvasAdapter: scales dimensions correctly when resized", () => {
+  const adapter = new FakeCanvasAdapter();
   const factor = 0.003;
   const level = 10;
   const expectedWidth = Math.min(640 + 1280 * 4 * factor * level, 1280 * 4);
@@ -86,18 +89,24 @@ test("FakeLocalStorageAdapter: saves and loads data with custom key", () => {
   assert.deepEqual(loaded, customData);
 });
 
-test("FakeLocalStorageAdapter: clear removes default key but preserves custom keys", () => {
+test("FakeLocalStorageAdapter: clear removes default key", () => {
   const storage = new FakeLocalStorageAdapter();
   const defaultData = { foo: "bar" };
-  const customKey = "custom-key";
-  const customData = { hello: "world" };
 
   storage.save(defaultData);
-  storage.save(customData, customKey);
-
   storage.clear();
 
   assert.strictEqual(storage.load(), null);
+});
+
+test("FakeLocalStorageAdapter: clear preserves custom keys", () => {
+  const storage = new FakeLocalStorageAdapter();
+  const customKey = "custom-key";
+  const customData = { hello: "world" };
+
+  storage.save(customData, customKey);
+  storage.clear();
+
   assert.deepEqual(storage.load(customKey), customData);
 });
 
@@ -118,6 +127,38 @@ test("FakeLocalStorageAdapter: ensure getItem, setItem, and removeItem are not e
   assert.strictEqual(storage.getItem, undefined);
   assert.strictEqual(storage.setItem, undefined);
   assert.strictEqual(storage.removeItem, undefined);
+});
+
+test("FakeLocalStorageAdapter: exportSave bundles game state and progress into JSON string", () => {
+  const storage = new FakeLocalStorageAdapter();
+  const gameState = { match: 12, modeKey: "infinite-capture" };
+  const progressState = { credits: 250, selectedTeam: "lizards" };
+
+  storage.save(gameState, "active-game-state");
+  storage.save(progressState, "game-progress");
+
+  const exportedContent = storage.exportSave();
+  const bundle = JSON.parse(exportedContent);
+
+  assert.deepEqual(bundle.activeGameState, gameState);
+  assert.deepEqual(bundle.gameProgress, progressState);
+});
+
+test("FakeLocalStorageAdapter: importSave restores game state and progress from JSON bundle", () => {
+  const storage = new FakeLocalStorageAdapter();
+  const gameState = { match: 12, modeKey: "infinite-capture" };
+  const progressState = { credits: 250, selectedTeam: "lizards" };
+  const bundle = {
+    activeGameState: gameState,
+    gameProgress: progressState
+  };
+  const exportedContent = JSON.stringify(bundle);
+
+  const importSuccess = storage.importSave(exportedContent);
+
+  assert.ok(importSuccess);
+  assert.deepEqual(storage.load("active-game-state"), gameState);
+  assert.deepEqual(storage.load("game-progress"), progressState);
 });
 
 test("FakeInputHandler: all keys have initial false state", () => {

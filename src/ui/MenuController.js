@@ -127,22 +127,90 @@ export class MenuController {
     this.#setPaused(false);
   }
 
-  showPause(canResume) {
-    const game = this.#game();
-    const pm   = game?.progressManager;
+  #renderPauseHeader(game, pm) {
     const team = pm ? `${this.raceStats[pm.selectedTeam].emoji} ${pm.selectedTeam}` : "—";
-    const leagueOver    = game?.mode?.isLeague && game.matchManager.match > game.leagueLength;
-    const canResumeReal = !!canResume && !leagueOver;
 
-    const body = this.#div("menu-summary",
+    return this.#div("menu-summary",
       this.#span(`Match: ${game?.matchManager.match ?? 0}`),
       this.#span(`Team: ${team}`),
       this.#span(`Credits: ${pm?.credits ?? 0} 💰`)
     );
+  }
+
+  #appendExportButton(game) {
+    this.#appendButton({
+      label: "📥 Export Save",
+      onClick: () => {
+        if (game?.storageAdapter) {
+          try {
+            const base64 = game.storageAdapter.exportSave();
+            const blob = new globalThis.Blob([base64], { type: "application/octet-stream" });
+            const url = globalThis.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "idle-rps-save.dat";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            globalThis.URL.revokeObjectURL(url);
+          } catch {
+            if (typeof globalThis.alert === "function") {
+              globalThis.alert("Export failed: The saved progress is corrupted or has been modified without authorization.");
+            }
+          }
+        }
+      }
+    });
+  }
+
+  #appendImportButton(game) {
+    this.#appendButton({
+      label: "📤 Import Save",
+      onClick: () => {
+        if (!game?.storageAdapter) return;
+
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".dat";
+        input.onchange = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new globalThis.FileReader();
+          reader.onload = (evt) => {
+            const content = evt.target.result;
+            try {
+              game.storageAdapter.importSave(content);
+              if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
+                window.location.reload();
+              }
+            } catch {
+              if (typeof globalThis.alert === "function") {
+                globalThis.alert("Import failed: The save file is corrupted or has been tampered with.");
+              }
+            }
+          };
+          reader.readAsText(file);
+        };
+        input.click();
+      }
+    });
+  }
+
+  showPause(canResume) {
+    const game = this.#game();
+    const pm   = game?.progressManager;
+    const leagueOver    = game?.mode?.isLeague && game.matchManager.match > game.leagueLength;
+    const canResumeReal = !!canResume && !leagueOver;
+
+    const body = this.#renderPauseHeader(game, pm);
 
     this.#render("⏸️ Pause", body);
     if (canResumeReal) this.#appendButton({ label: "Continue", className: "primary", onClick: () => this.close() });
     this.#appendButton({ label: "New game", onClick: () => this.#startNewGame() });
+
+    this.#appendExportButton(game);
+    this.#appendImportButton(game);
   }
 
   /**
@@ -189,27 +257,19 @@ export class MenuController {
     this.#showMode();
   }
 
-  #showMode() {
-    this.pendingMode = null;
-    const description = this.#createElement("div", "team-details");
-    const grid        = this.#createElement("div", "mode-pick-grid");
+  #navigateFromMode(config) {
+    if (!config) return;
 
-    this.#renderModeInfo(description, this.gameModes["infinite-death"]);
+    if (config.kind === "league") {
+      this.#showLeagueLength();
+    } else if (config.kind === "level") {
+      this.#showLevel();
+    } else {
+      this.#showTeam();
+    }
+  }
 
-    const body = this.#div("mode-pick-body", grid, description);
-    this.#render("🎮 Game mode", body);
-
-    const nextBtn = this.#appendButton({
-      label: "Next", className: "primary", disabled: true,
-      onClick: () => {
-        const config = this.gameModes[this.pendingMode];
-        if (!config) return;
-        if (config.kind === "league")     this.#showLeagueLength();
-        else if (config.kind === "level") this.#showLevel();
-        else                              this.#showTeam();
-      }
-    });
-
+  #createModeButtons(grid, description, nextBtn) {
     for (const [key, config] of Object.entries(this.gameModes)) {
       const btn = this.#createElement("button", "team-btn");
       btn.type = "button";
@@ -224,6 +284,27 @@ export class MenuController {
       });
       grid.appendChild(btn);
     }
+  }
+
+  #showMode() {
+    this.pendingMode = null;
+    const description = this.#createElement("div", "team-details");
+    const grid        = this.#createElement("div", "mode-pick-grid");
+
+    this.#renderModeInfo(description, this.gameModes["infinite-death"]);
+
+    const body = this.#div("mode-pick-body", grid, description);
+    this.#render("🎮 Game mode", body);
+
+    const nextBtn = this.#appendButton({
+      label: "Next", className: "primary", disabled: true,
+      onClick: () => {
+        const config = this.gameModes[this.pendingMode];
+        this.#navigateFromMode(config);
+      }
+    });
+
+    this.#createModeButtons(grid, description, nextBtn);
   }
 
   #showLeagueLength() {
@@ -279,34 +360,19 @@ export class MenuController {
     this.#appendButton({ label: "Next", className: "primary", onClick: () => this.#showTeam() });
   }
 
-  #showTeam() {
-    this.pendingTeam  = null;
-    const details     = this.#createElement("div", "team-details");
-    const grid        = this.#createElement("div", "team-pick-grid");
-    const teams       = Object.entries(this.raceStats);
+  #navigateBackFromTeam() {
+    const config = this.gameModes[this.pendingMode];
 
-    this.#renderTeamInfo(details, teams[0][0]);
+    if (config?.kind === "league") {
+      this.#showLeagueLength();
+    } else if (config?.kind === "level") {
+      this.#showLevel();
+    } else {
+      this.#showMode();
+    }
+  }
 
-    const body = this.#div("team-pick-wrap", grid, details);
-    this.#render("👥 Choose your team", body);
-
-    const backTarget = () => {
-      const config = this.gameModes[this.pendingMode];
-      if (config?.kind === "league")     this.#showLeagueLength();
-      else if (config?.kind === "level") this.#showLevel();
-      else                               this.#showMode();
-    };
-    this.#appendButton({ label: "Back", onClick: backTarget });
-
-    const chooseBtn = this.#appendButton({
-      label: "Choose", className: "primary", disabled: true,
-      onClick: () => {
-        if (this.pendingTeam && this.#game()?.progressManager?.selectTeam(this.pendingTeam)) {
-          this.#start();
-        }
-      }
-    });
-
+  #createTeamButtons(grid, details, chooseBtn, teams) {
     for (const [team, stats] of teams) {
       const btn = this.#createElement("button", "team-btn");
       btn.type = "button";
@@ -323,6 +389,33 @@ export class MenuController {
       });
       grid.appendChild(btn);
     }
+  }
+
+  #showTeam() {
+    this.pendingTeam  = null;
+    const details     = this.#createElement("div", "team-details");
+    const grid        = this.#createElement("div", "team-pick-grid");
+    const teams       = Object.entries(this.raceStats);
+
+    this.#renderTeamInfo(details, teams[0][0]);
+
+    const body = this.#div("team-pick-wrap", grid, details);
+    this.#render("👥 Choose your team", body);
+
+    this.#appendButton({ label: "Back", onClick: () => this.#navigateBackFromTeam() });
+
+    const chooseBtn = this.#appendButton({
+      label: "Choose", className: "primary", disabled: true,
+      onClick: () => {
+        const game = this.#game();
+
+        if (this.pendingTeam && game?.progressManager?.selectTeam(this.pendingTeam)) {
+          this.#start();
+        }
+      }
+    });
+
+    this.#createTeamButtons(grid, details, chooseBtn, teams);
   }
 
   #renderModeInfo(container, config) {
