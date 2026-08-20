@@ -8,9 +8,9 @@ Combat generates large quantities of temporary particles (`BloodParticles.js`, `
 Micro-stuttering during intense battles with high particle density, breaking visual fluidness.
 
 ## Objectives
-- [ ] Implement a reusable `ParticlePool` class.
-- [ ] Modify `ParticleSystem.js` to lease particles from the pool instead of raw instantiation.
-- [ ] Recycle dead particles by returning them to the pool for later reuse.
+- [x] Implement a reusable `ParticlePool` class.
+- [x] Modify `ParticleSystem.js` to lease particles from the pool instead of raw instantiation.
+- [x] Recycle dead particles by returning them to the pool for later reuse.
 
 ## Architecture & Design
 
@@ -28,6 +28,9 @@ Micro-stuttering during intense battles with high particle density, breaking vis
 class ParticlePool {
   constructor(size) {}
   
+  // Pre-allocate a set of inactive particles of a given type
+  preAllocate(type, count, options) {}
+
   // Obtain an inactive particle, initializing its state
   acquire(type, x, y, options) {}
   
@@ -45,11 +48,11 @@ class ParticlePool {
 
 ## Verification Plan (Definition of Done)
 ### Automated Tests
-- [ ] Unit test checking pool allocation, release, and size boundaries.
-- [ ] Integration test verifying no new memory allocations occur after pool saturation.
+- [x] Unit test checking pool allocation, release, and size boundaries.
+- [x] Integration test verifying no new memory allocations occur after pool saturation.
 
 ### Manual Verification
-- [ ] Record a 10-second memory profile in Chrome DevTools during heavy combat; confirm a flat "sawtooth" memory curve with near-zero GC spikes.
+- [x] Record a 10-second memory profile in Chrome DevTools during heavy combat; confirm a flat "sawtooth" memory curve with near-zero GC spikes.
 
 ## Risks & Mitigations
 - **Risk:** Particles retaining state from previous lifecycles (visual glitches).

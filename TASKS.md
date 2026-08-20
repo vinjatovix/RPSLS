@@ -3,7 +3,7 @@
 ## 📋 Active Specifications
 *(Tasks currently being worked on. Each entry should link to its spec file in `docs/specs/`)*
 
-- [ ] 🔥 **[TODO - PRIORITY]** Spec #3: Particle Object Pooling (`docs/specs/spec_03_particle_object_pooling.md`)
+- [ ] 🔥 **[TODO - PRIORITY]** Spec #6: LocalStorage Progress Persistence (`docs/specs/spec_06_progress_persistence.md`)
 
 ## 🗄️ Backlog
 *(Planned technical improvements and features)*
@@ -11,7 +11,6 @@
 ### 🛠️ Refactoring (Technical Debt)
 - [ ] **[TODO]** Spec #4: Canvas Rendering Optimization (`docs/specs/spec_04_canvas_rendering_optimization.md`)
 - [ ] **[TODO]** Spec #5: UI DOM Updates Optimization (`docs/specs/spec_05_ui_dom_updates_optimization.md`)
-- [ ] **[TODO]** Spec #6: LocalStorage Progress Persistence (`docs/specs/spec_06_progress_persistence.md`)
 - [ ] **[TODO]** Spec #13: Canvas Cache & Particle Batching (`docs/specs/spec_13_canvas_cache_and_particle_batching.md`)
 - [ ] **[TODO]** Spec #16: Collision System Extraction (Pending Spec)
 - [ ] **[TODO]** Spec #17: Entity Lifecycle Management / ECS Lite (Pending Spec)
@@ -28,6 +27,7 @@
 *(Completed specifications)*
 - [x] **[DONE]** Spec #1: Event-Driven UI (`docs/specs/spec_01_event_driven_ui.md`)
 - [x] **[DONE]** Spec #2: Spatial Partitioning (`docs/specs/spec_02_spatial_partitioning.md`)
+- [x] **[DONE]** Spec #3: Particle Object Pooling (`docs/specs/spec_03_particle_object_pooling.md`)
 - [x] **[DONE]** Spec #12: Test Infrastructure & Strategy Improvements (`docs/specs/spec_12_test_infrastructure.md`)
 - [x] **[DONE]** Spec #14: EntityManager Extraction (`docs/specs/spec_14_entity_manager.md`)
 - [x] **[DONE]** Spec #15: MatchManager Extraction (`docs/specs/spec_15_match_manager.md`)

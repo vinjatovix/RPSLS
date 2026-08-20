@@ -23,7 +23,7 @@ export class EntityManager {
       enemyGroupCount
     );
     this.powerups = [];
-    this.particles.particles = [];
+    this.particles.clear();
     this.#syncSpatialGrid();
   }
 

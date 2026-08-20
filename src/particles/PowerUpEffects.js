@@ -1,5 +1,11 @@
 export class PowerUpBurst {
-  constructor({ context, x, y, color }) {
+  constructor(options) {
+    if (options) {
+      this.init(options);
+    }
+  }
+
+  init({ context, x, y, color }) {
     this.context = context;
     this.x = x;
     this.y = y;
