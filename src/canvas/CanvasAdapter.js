@@ -1,3 +1,5 @@
+import { Random } from "../core/index.js";
+
 export class CanvasAdapter {
   constructor({ canvasId = "canvas1", displayConfig }) {
     this.canvas = document.getElementById(canvasId);
@@ -57,8 +59,8 @@ export class CanvasAdapter {
 
   getRandomSpawnPoint() {
     const margin = this.canvas.width / 6;
-    const x = Math.random() * (this.canvas.width - margin * 2) + margin;
-    const y = Math.random() * (this.canvas.height - margin * 2) + margin;
+    const x = Random.next() * (this.canvas.width - margin * 2) + margin;
+    const y = Random.next() * (this.canvas.height - margin * 2) + margin;
     return { x, y };
   }
 
@@ -80,6 +82,18 @@ export class CanvasAdapter {
     return {
       x: Math.max(0, Math.min(position.x, this.canvas.width - position.width)),
       y: Math.max(0, Math.min(position.y, this.canvas.height - position.height))
+    };
+  }
+
+  clientToCanvasCoordinates(clientX, clientY) {
+    const rect = this.canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) {
+      return null;
+    }
+
+    return {
+      x: ((clientX - rect.left) * this.canvas.width) / rect.width,
+      y: ((clientY - rect.top) * this.canvas.height) / rect.height
     };
   }
 }

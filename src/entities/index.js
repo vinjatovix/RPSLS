@@ -1,0 +1,12 @@
+export { BuffManager } from "./BuffManager.js";
+export { CombatSystem } from "./CombatSystem.js";
+export { Enemy } from "./Enemy.js";
+export { EnemyFactory } from "./EnemyFactory.js";
+export { EnemyRenderer } from "./EnemyRenderer.js";
+export { EntityManager } from "./EntityManager.js";
+export { MatchManager } from "./MatchManager.js";
+export { MovementController } from "./MovementController.js";
+export { PowerUp } from "./PowerUp.js";
+export { TargetingSystem } from "./TargetingSystem.js";
+export { GLOBAL_EFFECT_HANDLERS, TARGET_EFFECT_HANDLERS } from "./powerupHandlers.js";
+export { Rock, Paper, Scissors, Lizard, Spock, RACE_CLASSES, ALL_RACES } from "./races.js";

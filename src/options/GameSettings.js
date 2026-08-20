@@ -1,11 +1,10 @@
-import { clone } from "../core/clone.js";
+import { clone } from "../core/index.js";
 
 export class GameSettings {
   constructor({ inputHandler, storageAdapter, gameConfig }) {
     this.inputHandler = inputHandler;
     this.storageAdapter = storageAdapter;
 
-    // Copy initial config (avoid mutating the frozen config)
     this.display = clone(gameConfig.display);
     this.mechanics = clone(gameConfig.mechanics);
     this.effects = clone(gameConfig.effects);
@@ -14,7 +13,6 @@ export class GameSettings {
 
     this.loadFromStorage();
 
-    // Sync keys with options (so update() does not overwrite defaults)
     this.syncKeysFromOptions();
   }
 
@@ -55,11 +53,6 @@ export class GameSettings {
         Object.assign(this.display, saved.display);
       }
     }
-    // Fixed mechanics (not editable by keyboard): out is always death,
-    // limitCanvas is obsolete and capture is set per mode.
-    this.mechanics.outDies = true;
-    this.mechanics.limitCanvas = false;
-    this.mechanics.capture = false;
   }
 
   syncKeysFromOptions() {

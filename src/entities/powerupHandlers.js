@@ -1,15 +1,16 @@
+import { Random } from "../core/index.js";
 export const GLOBAL_EFFECT_HANDLERS = {
   time: (powerup, team, config) => {
-    powerup.game.timeLeft += config.amount;
+    powerup.game.matchManager.timeLeft += config.amount;
   },
   gold: (powerup, team, config) => {
     if (team !== powerup.game.progressManager.selectedTeam) return;
-    powerup.game.progressManager.awardCredits(5 + Math.floor(Math.random() * 21));
+    powerup.game.progressManager.awardCredits(config.amount + Math.floor(Random.next() * config.range));
   }
 };
 
 export const TARGET_EFFECT_HANDLERS = {
-  heal: (target, config) => {
+  heal: (target) => {
     target.life = target.maxLife;
   },
   zap: (target, config) => {

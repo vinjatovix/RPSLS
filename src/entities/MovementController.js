@@ -1,3 +1,4 @@
+import { Random } from "../core/index.js";
 const ANGLE_THRESHOLD_ACCELERATE = Math.PI / 12;  // ~15° - aligned enough to accelerate
 const ANGLE_THRESHOLD_BRAKE = Math.PI / 8;        // ~22.5° - turning too sharp, brake
 const BASE_FRAME_RATE = 30;                       // reference frame rate for deltaTime normalization
@@ -13,7 +14,7 @@ export class MovementController {
     const movement = stats.movement;
     const { speed = 1, acceleration = 1, turn = 1, deceleration = 1 } = entity.modifiers || {};
 
-    this.speed = (movement.baseSpeed + Math.random() * movement.speedVariance) * speed * scale;
+    this.speed = (movement.baseSpeed + Random.next() * movement.speedVariance) * speed * scale;
     this.maxSpeed = movement.maxSpeed * speed * (scale * 1.5);
     this.minSpeed = movement.minSpeed;
     this.acceleration = movement.acceleration * acceleration * scale * 2;

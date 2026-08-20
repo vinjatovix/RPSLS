@@ -1,7 +1,17 @@
-import { GAME_MODES, LEAGUE_LENGTHS, RACE_STATS } from "../config/gameConfig.js";
+import { RACE_STATS } from "../config/gameConfig.js";
 
 const LEVEL_MIN = 0;
 const LEVEL_MAX = 2000;
+
+const DEFAULT_GAME_MODES = {
+  "infinite-death": { label: "Infinite Deathmatch", kind: "infinite", capture: false },
+  "infinite-capture": { label: "Infinite Domination", kind: "infinite", capture: true },
+  "league-death": { label: "Deathmatch League", kind: "league", isLeague: true, capture: false },
+  "league-capture": { label: "Domination League", kind: "league", isLeague: true, capture: true },
+  "level-death": { label: "Level Deathmatch", kind: "level", capture: false },
+  "level-capture": { label: "Level Domination", kind: "level", capture: true }
+};
+const DEFAULT_LEAGUE_LENGTHS = [50, 100, 200];
 
 const TEAM_STAT_BARS = [
   { label: "Health",       get: stats => stats.health.max },
@@ -11,22 +21,17 @@ const TEAM_STAT_BARS = [
   { label: "Turn",         get: stats => stats.movement.rotationSpeed }
 ];
 
-const STAT_MAXES = Object.fromEntries(
-  TEAM_STAT_BARS.map(bar => [
-    bar.label,
-    Math.max(...Object.values(RACE_STATS).map(s => bar.get(s)))
-  ])
-);
-
 export class MenuController {
   /**
    * @param {Object} options
    * @param {() => import("../index.js").Game | null} options.getGame
    * @param {(config: {mode: string, leagueLength: number, startLevel: number, team: string}) => void} options.onStart
+   * @param {import("../config/gameConfig.js").RACE_STATS} [options.raceStats]
    */
-  constructor({ getGame, onStart }) {
+  constructor({ getGame, onStart, raceStats = RACE_STATS }) {
     this.getGame = getGame;
     this.onStart = onStart;
+    this.fallbackRaceStats = raceStats;
     this.overlayElement = document.getElementById("menu-overlay");
     this.titleElement   = document.getElementById("menu-title");
     this.bodyElement    = document.getElementById("menu-body");
@@ -35,6 +40,24 @@ export class MenuController {
     this.pendingMode         = null;
     this.pendingLeagueLength = null;
     this.pendingTeam         = null;
+    this.statMaxes = Object.fromEntries(
+      TEAM_STAT_BARS.map(bar => [
+        bar.label,
+        Math.max(...Object.values(this.raceStats).map(s => bar.get(s)))
+      ])
+    );
+  }
+
+  get raceStats() {
+    return this.#game()?.raceStats || this.fallbackRaceStats;
+  }
+
+  get gameModes() {
+    return this.#game()?.gameModes || DEFAULT_GAME_MODES;
+  }
+
+  get leagueLengths() {
+    return this.#game()?.leagueLengths || DEFAULT_LEAGUE_LENGTHS;
   }
 
   #game() {
@@ -43,7 +66,7 @@ export class MenuController {
 
   #setPaused(paused) {
     const game = this.#game();
-    if (game) game.paused = paused;
+    if (game) game.matchManager.paused = paused;
   }
 
   #createElement(tag, className = "") {
@@ -107,12 +130,12 @@ export class MenuController {
   showPause(canResume) {
     const game = this.#game();
     const pm   = game?.progressManager;
-    const team = pm ? `${RACE_STATS[pm.selectedTeam].emoji} ${pm.selectedTeam}` : "—";
-    const leagueOver    = game?.mode?.isLeague && game.match > game.leagueLength;
+    const team = pm ? `${this.raceStats[pm.selectedTeam].emoji} ${pm.selectedTeam}` : "—";
+    const leagueOver    = game?.mode?.isLeague && game.matchManager.match > game.leagueLength;
     const canResumeReal = !!canResume && !leagueOver;
 
     const body = this.#div("menu-summary",
-      this.#span(`Match: ${game?.match ?? 0}`),
+      this.#span(`Match: ${game?.matchManager.match ?? 0}`),
       this.#span(`Team: ${team}`),
       this.#span(`Credits: ${pm?.credits ?? 0} 💰`)
     );
@@ -129,7 +152,7 @@ export class MenuController {
     const winner   = ranking[0];
     const won      = winner?.name === playerTeam;
     const position = ranking.findIndex(t => t.name === playerTeam) + 1;
-    const config   = GAME_MODES[modeKey] ?? {};
+    const config   = this.gameModes[modeKey] ?? {};
 
     const titleText = won ? "🏆 You won the league!" : `🏆 ${winner?.emoji} ${winner?.name} won`;
     const header = this.#div("league-result-head",
@@ -152,7 +175,7 @@ export class MenuController {
 
     const footerText = won
       ? "Your team took the league. 🎉"
-      : `Your team (${RACE_STATS[playerTeam].emoji} ${playerTeam}) finished in position ${position}.`;
+      : `Your team (${this.raceStats[playerTeam].emoji} ${playerTeam}) finished in position ${position}.`;
 
     const body = this.#div("", header, grid, this.#div("menu-hint", this.#span(footerText)));
     this.#render("📊 League results", body);
@@ -171,7 +194,7 @@ export class MenuController {
     const description = this.#createElement("div", "team-details");
     const grid        = this.#createElement("div", "mode-pick-grid");
 
-    this.#renderModeInfo(description, GAME_MODES["infinite-death"]);
+    this.#renderModeInfo(description, this.gameModes["infinite-death"]);
 
     const body = this.#div("mode-pick-body", grid, description);
     this.#render("🎮 Game mode", body);
@@ -179,7 +202,7 @@ export class MenuController {
     const nextBtn = this.#appendButton({
       label: "Next", className: "primary", disabled: true,
       onClick: () => {
-        const config = GAME_MODES[this.pendingMode];
+        const config = this.gameModes[this.pendingMode];
         if (!config) return;
         if (config.kind === "league")     this.#showLeagueLength();
         else if (config.kind === "level") this.#showLevel();
@@ -187,7 +210,7 @@ export class MenuController {
       }
     });
 
-    for (const [key, config] of Object.entries(GAME_MODES)) {
+    for (const [key, config] of Object.entries(this.gameModes)) {
       const btn = this.#createElement("button", "team-btn");
       btn.type = "button";
       btn.dataset.mode = key;
@@ -218,7 +241,7 @@ export class MenuController {
       onClick: () => this.#showTeam()
     });
 
-    for (const length of LEAGUE_LENGTHS) {
+    for (const length of this.leagueLengths) {
       const btn = this.#createElement("button", "team-btn");
       btn.type = "button";
       btn.textContent = `${length} matches`;
@@ -260,7 +283,7 @@ export class MenuController {
     this.pendingTeam  = null;
     const details     = this.#createElement("div", "team-details");
     const grid        = this.#createElement("div", "team-pick-grid");
-    const teams       = Object.entries(RACE_STATS);
+    const teams       = Object.entries(this.raceStats);
 
     this.#renderTeamInfo(details, teams[0][0]);
 
@@ -268,7 +291,7 @@ export class MenuController {
     this.#render("👥 Choose your team", body);
 
     const backTarget = () => {
-      const config = GAME_MODES[this.pendingMode];
+      const config = this.gameModes[this.pendingMode];
       if (config?.kind === "league")     this.#showLeagueLength();
       else if (config?.kind === "level") this.#showLevel();
       else                               this.#showMode();
@@ -327,12 +350,12 @@ export class MenuController {
   }
 
   #renderTeamInfo(container, team) {
-    const stats = RACE_STATS[team];
+    const stats = this.raceStats[team];
     if (!stats) return;
     container.innerHTML = "";
 
-    const predators = Object.keys(RACE_STATS).filter(t => RACE_STATS[t].aim.includes(team));
-    const withEmoji = t => `${RACE_STATS[t].emoji} ${t}`;
+    const predators = Object.keys(this.raceStats).filter(t => this.raceStats[t].aim.includes(team));
+    const withEmoji = t => `${this.raceStats[t].emoji} ${t}`;
 
     const strong = this.#createElement("strong");
     strong.textContent = team;
@@ -342,7 +365,7 @@ export class MenuController {
 
     const barBox = this.#createElement("div", "stat-bar-box");
     for (const bar of TEAM_STAT_BARS) {
-      const percent = Math.round((bar.get(stats) / STAT_MAXES[bar.label]) * 100);
+      const percent = Math.round((bar.get(stats) / this.statMaxes[bar.label]) * 100);
       const fill    = this.#createElement("span", "stat-bar-fill");
       fill.style.width      = `${percent}%`;
       fill.style.background = stats.color;
@@ -367,7 +390,7 @@ export class MenuController {
   }
 
   #start() {
-    const config = GAME_MODES[this.pendingMode] ?? GAME_MODES["infinite-death"];
+    const config = this.gameModes[this.pendingMode] ?? this.gameModes["infinite-death"];
     let level    = +(this.levelInput?.value ?? 0);
     if (level < LEVEL_MIN || level > LEVEL_MAX || isNaN(level)) level = 0;
     this.onStart({

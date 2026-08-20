@@ -1,18 +1,23 @@
-import { CollisionDetector } from "../canvas/geometry/CollisionDetector.js";
+import { CollisionDetector } from "../canvas/index.js";
 
 export class CombatSystem {
-  constructor({ entity, baseDamage, damageMultiplier, armor, vampire, buffManager, scoreManager }) {
+  constructor({ entity, baseDamage, damageMultiplier, armor, vampire, buffManager, eventBus }) {
     this.entity = entity;
     this.baseDamage = baseDamage;
     this.damageMultiplier = damageMultiplier;
     this.armor = armor;
     this.vampire = vampire;
     this.buffManager = buffManager;
-    this.scoreManager = scoreManager;
+    this.eventBus = eventBus;
+
+    const maxDimension = Math.max(this.entity.width || 20, this.entity.height || 20);
+    const safetyMarginMultiplier = 1.25;
+    this.queryRadius = maxDimension * safetyMarginMultiplier;
   }
 
   getDamage() {
     const buffMultiplier = this.buffManager.getMultiplier("damage");
+
     return this.baseDamage * this.damageMultiplier * buffMultiplier;
   }
 
@@ -24,6 +29,7 @@ export class CombatSystem {
   }
 
   kill(enemy) {
+    if (this.entity.dead || enemy.dead) return;
     if (!this.entity.aim.includes(enemy.team)) return;
 
     const damage = this.getDamage() * enemy.combatSystem.getIncomingDamageMultiplier();
@@ -38,13 +44,23 @@ export class CombatSystem {
     if (enemy.life <= 0) {
       enemy.dead = true;
       enemy.killedBy = this.entity.team;
-      this.scoreManager.recordKill(this.entity.team, enemy.team);
+      this.eventBus?.emit("kill", { killerTeam: this.entity.team, victimTeam: enemy.team });
     }
   }
 
   checkCollision(allEnemies) {
-    for (const enemy of allEnemies) {
-      if (enemy !== this.entity && CollisionDetector.checkOverlap(this.entity, enemy)) {
+    if (this.entity.dead) return;
+
+    let candidates = allEnemies;
+    const grid = this.entity.game?.spatialGrid;
+    if (grid) {
+      const cx = this.entity.x + (this.entity.width || 20) / 2;
+      const cy = this.entity.y + (this.entity.height || 20) / 2;
+      candidates = grid.query(cx, cy, this.queryRadius);
+    }
+
+    for (const enemy of candidates) {
+      if (enemy !== this.entity && !enemy.dead && CollisionDetector.checkOverlap(this.entity, enemy)) {
         this.kill(enemy);
       }
     }

@@ -1,8 +1,3 @@
-import { UPGRADES, RACE_STATS } from "../config/gameConfig.js";
-
-const PER_RACE_UPGRADES = Object.keys(UPGRADES).filter(key => UPGRADES[key].perRace);
-const RACE_TEAMS = Object.keys(RACE_STATS);
-
 function isNonNegativeFinite(value) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
@@ -14,8 +9,17 @@ export class ProgressManager {
   #upgrades = {};
   #raceUpgrades = {};
 
-  constructor({ eventBus }) {
+  constructor({ eventBus, raceStats, upgrades }) {
+    if (!raceStats) {
+      throw new TypeError("raceStats is required");
+    }
+    if (!upgrades) {
+      throw new TypeError("upgrades is required");
+    }
     this.eventBus = eventBus;
+    this.raceStats = raceStats;
+    this.upgrades = upgrades;
+    this.perRaceUpgrades = Object.keys(upgrades).filter(key => upgrades[key].perRace);
 
     this.#upgrades = this.#defaultUpgrades();
     this.#raceUpgrades = this.#defaultRaceUpgrades();
@@ -24,24 +28,25 @@ export class ProgressManager {
   }
 
   #defaultUpgrades() {
-    return {
-      powerupLuck: 0,
-      creditRate: 0,
-      timeCompression: 0,
-      powerupDuration: 0,
-      powerupLimit: 0,
-      collectRadius: 0
-    };
+    const defaults = {};
+    Object.keys(this.upgrades).forEach(key => {
+      if (!this.upgrades[key].perRace) {
+        defaults[key] = 0;
+      }
+    });
+
+    return defaults;
   }
 
   #defaultRaceUpgrades() {
     const raceUpgrades = {};
-    RACE_TEAMS.forEach(team => {
+    Object.keys(this.raceStats).forEach(team => {
       raceUpgrades[team] = {};
-      PER_RACE_UPGRADES.forEach(key => {
+      this.perRaceUpgrades.forEach(key => {
         raceUpgrades[team][key] = 0;
       });
     });
+
     return raceUpgrades;
   }
 
@@ -82,6 +87,7 @@ export class ProgressManager {
     if (this.#credits < amount) return false;
     this.#credits -= amount;
     this.eventBus.emit("progress:update", { credits: this.#credits });
+
     return true;
   }
 
@@ -90,29 +96,32 @@ export class ProgressManager {
   }
 
   selectTeam(team) {
-    if (!RACE_TEAMS.includes(team)) return false;
+    if (!Object.keys(this.raceStats).includes(team)) return false;
     this.#selectedTeam = team;
     this.#teamChosen = true;
+
     return true;
   }
 
   getUpgradeCost(key, team = null) {
-    const config = UPGRADES[key];
+    const config = this.upgrades[key];
     if (!config) return 0;
     const level = this.getUpgradeLevel(key, team);
+
     return Math.floor(config.baseCost * Math.pow(config.costGrowth, level));
   }
 
   getUpgradeLevel(key, team = null) {
-    if (UPGRADES[key].perRace) {
+    if (this.upgrades[key].perRace) {
       const t = team || this.selectedTeam;
       return this.#raceUpgrades[t]?.[key] ?? 0;
     }
+
     return this.#upgrades[key] ?? 0;
   }
 
   buyUpgrade(key, team = null) {
-    const config = UPGRADES[key];
+    const config = this.upgrades[key];
     if (!config) return false;
     const cost = this.getUpgradeCost(key, team);
     if (!this.spendCredits(cost)) return false;
@@ -124,11 +133,13 @@ export class ProgressManager {
       this.#upgrades[key] += 1;
     }
     this.eventBus.emit("progress:update", { credits: this.#credits });
+    
     return true;
   }
 
   getRaceModifiers(team) {
     const levels = this.#raceUpgrades[team] ?? {};
+
     return {
       health: 1 + 0.1 * (levels.health ?? 0),
       damage: 1 + 0.1 * (levels.damage ?? 0),

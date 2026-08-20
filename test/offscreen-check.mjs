@@ -3,23 +3,24 @@
  *   node test/offscreen-check.mjs [matches=100]
  */
 
-import "./dom-stub.js";
 import { Game } from "../src/index.js";
 import { TEAMS } from "../src/testing/balanceRunner.js";
+import { createFakeAdapters } from "./doubles/FakeAdapters.mjs";
+import { TICK_MS } from "./doubles/setupSimulationContext.mjs";
 
 const matches = +process.argv[2] || 100;
 
-const game = new Game({ startLevel: 0 });
+const game = new Game({ startLevel: 0, adapters: createFakeAdapters() });
 game.progressManager.reset();
 game.progressManager.selectTeam("rocks");
 game.progressManager.awardCredits = () => {};
-game.match = 0;
+game.matchManager.match = 0;
 game.onTeamChanged();
 game.powerupTimer = Infinity;
 
 const allSeen = new Set();
-while (game.match <= matches) {
-  game.update(16);
+while (game.matchManager.match <= matches) {
+  game.update(TICK_MS);
   for (const enemy of game.enemies) allSeen.add(enemy);
 }
 

@@ -1,15 +1,16 @@
-import { RACE_STATS } from "../config/gameConfig.js";
-import { CollisionDetector } from "../canvas/geometry/CollisionDetector.js";
+import { CollisionDetector } from "../canvas/index.js";
+import { Random } from "../core/index.js";
 import { BuffManager } from "./BuffManager.js";
-import { MovementController } from "./MovementController.js";
-import { TargetingSystem } from "./TargetingSystem.js";
 import { CombatSystem } from "./CombatSystem.js";
 import { EnemyRenderer } from "./EnemyRenderer.js";
+import { MovementController } from "./MovementController.js";
+import { TargetingSystem } from "./TargetingSystem.js";
 
 export class Enemy {
   constructor({ game, x = null, y = null, angle = null, modifiers = null }, team = "rocks") {
+    this.game = game;
     this.team = team;
-    const stats = RACE_STATS[team];
+    const stats = game.raceStats[team];
     const {
       health = 1,
       damage = 1,
@@ -23,12 +24,11 @@ export class Enemy {
     this.aim = [...stats.aim];
     this.rotationOffset = stats.rotationOffset || 0;
 
-    this.game = game;
     this.context = this.game.canvasAdapter.getContext();
     const spawn = this.game.canvasAdapter.getRandomSpawnPoint();
     this.x = x || spawn.x;
     this.y = y || spawn.y;
-    this.angle = angle || Math.random() * 2 * Math.PI;
+    this.angle = angle || Random.next() * 2 * Math.PI;
 
     this.width = 20;
     this.height = 20;
@@ -45,7 +45,7 @@ export class Enemy {
     this.regeneration = regeneration;
     this.modifiers = modifiers;
 
-    this.buffManager = new BuffManager(() => this.game.gameTime);
+    this.buffManager = new BuffManager(() => this.game.matchManager.gameTime);
     this.movementController = new MovementController({
       entity: this,
       stats,
@@ -61,7 +61,7 @@ export class Enemy {
       armor,
       vampire,
       buffManager: this.buffManager,
-      scoreManager: this.game.scoreManager
+      eventBus: this.game?.eventBus
     });
     this.renderer = new EnemyRenderer(this, this.context, this.game.canvasAdapter, this.game.options);
   }
@@ -94,7 +94,6 @@ export class Enemy {
     return this.buffManager.getMultiplier("turn");
   }
 
-  // Compatibilidad tests - métodos en vez getters (deepFreeze safe)
   get speed() {
     return this.movementController?.speed;
   }
@@ -127,7 +126,7 @@ export class Enemy {
     this.movementController.move(deltaTime);
   }
 
-  update(deltaTime, allEnemies) {
+  preUpdate(deltaTime, allEnemies) {
     const regenerationBuff = this.buffManager.getMultiplier("regeneration");
     const regeneration = regenerationBuff !== null ? regenerationBuff : this.regeneration;
     if (regeneration > 0) {
@@ -135,8 +134,16 @@ export class Enemy {
     }
     this.checkPosition();
     this.targetingSystem.setTarget(allEnemies);
-    this.move(deltaTime);
+  }
+
+  postUpdate(allEnemies) {
     this.combatSystem.checkCollision(allEnemies);
+  }
+
+  update(deltaTime, allEnemies) {
+    this.preUpdate(deltaTime, allEnemies);
+    this.move(deltaTime);
+    this.postUpdate(allEnemies);
   }
 
   draw() {
