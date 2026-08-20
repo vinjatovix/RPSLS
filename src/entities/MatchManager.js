@@ -1,3 +1,5 @@
+import { Random } from "../core/index.js";
+
 export class MatchManager {
   constructor({ game, eventBus, options, startLevel }) {
     this.game = game;
@@ -28,6 +30,10 @@ export class MatchManager {
   }
 
   startMatch() {
+    if (this.game.leagueSeed) {
+      Random.setSeed(this.game.leagueSeed + this.match);
+    }
+
     this.options.setMechanic("timeless", true);
     this.options.setMechanic("capture", this.game.mode.capture);
     this.enemyGroupCount = Math.max(1, Math.floor(this.match / this.game.config.meta.enemiesPerLevel));
@@ -60,6 +66,8 @@ export class MatchManager {
       this.endLeague();
       return;
     }
+
+    this.game.saveGameState?.();
 
     if (this.game.width < this.options.display.maxWidth) {
       const { width, height } = this.game.canvasAdapter.resize(1.003 * this.match);

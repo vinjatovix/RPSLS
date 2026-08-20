@@ -3,7 +3,7 @@
 ## 📋 Active Specifications
 *(Tasks currently being worked on. Each entry should link to its spec file in `docs/specs/`)*
 
-- [ ] 🔥 **[TODO - PRIORITY]** Spec #6: LocalStorage Progress Persistence (`docs/specs/spec_06_progress_persistence.md`)
+- [ ] 🔥 **[TODO - PRIORITY]** Spec #21: Secure Asynchronous Storage with Web Crypto (`docs/specs/spec_21_secure_async_storage.md`)
 
 ## 🗄️ Backlog
 *(Planned technical improvements and features)*
@@ -28,6 +28,7 @@
 - [x] **[DONE]** Spec #1: Event-Driven UI (`docs/specs/spec_01_event_driven_ui.md`)
 - [x] **[DONE]** Spec #2: Spatial Partitioning (`docs/specs/spec_02_spatial_partitioning.md`)
 - [x] **[DONE]** Spec #3: Particle Object Pooling (`docs/specs/spec_03_particle_object_pooling.md`)
+- [x] **[DONE]** Spec #6: LocalStorage Progress Persistence (`docs/specs/spec_06_progress_persistence.md`)
 - [x] **[DONE]** Spec #12: Test Infrastructure & Strategy Improvements (`docs/specs/spec_12_test_infrastructure.md`)
 - [x] **[DONE]** Spec #14: EntityManager Extraction (`docs/specs/spec_14_entity_manager.md`)
 - [x] **[DONE]** Spec #15: MatchManager Extraction (`docs/specs/spec_15_match_manager.md`)
