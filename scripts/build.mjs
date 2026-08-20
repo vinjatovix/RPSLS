@@ -10,7 +10,7 @@ rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
 
 await build({
-  entryPoints: [join(root, "src", "index.js")],
+  entryPoints: [join(root, "src", "main.js")],
   outfile: join(dist, "index.js"),
   bundle: true,
   minify: true,
@@ -23,7 +23,7 @@ cpSync(join(root, "style.css"), join(dist, "style.css"));
 writeFileSync(join(dist, ".nojekyll"), "");
 
 const html = readFileSync(join(root, "index.html"), "utf8").replace(
-  'src="src/index.js"',
+  'src="src/main.js"',
   'src="./index.js"'
 );
 writeFileSync(join(dist, "index.html"), html);

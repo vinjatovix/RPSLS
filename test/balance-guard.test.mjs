@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import "./dom-stub.js";
 import { runCampaign, aggregateRuns, TEAMS } from "../src/testing/balanceRunner.js";
 import { TICK_MS } from "./doubles/setupSimulationContext.mjs";
 

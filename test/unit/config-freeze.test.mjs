@@ -1,10 +1,10 @@
-import "../dom-stub.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { GAME_CONFIG, RACE_STATS } from "../../src/config/gameConfig.js";
 import { deepFreeze, clone } from "../../src/core/index.js";
 import { Game } from "../../src/index.js";
+import { createFakeAdapters } from "../doubles/FakeAdapters.mjs";
 
 test("deepFreeze freezes deeply", () => {
   const config = { a: { b: { c: 1 } }, arr: [1, 2] };
@@ -62,16 +62,21 @@ test("Game successfully runs using custom injected configurations", () => {
   const game = new Game({
     config: customConfig,
     raceStats: customRaceStats,
-    team: "rocks"
+    team: "rocks",
+    adapters: createFakeAdapters()
   });
 
-  assert.equal(game.config.meta.enemiesPerLevel, 5, "Injected config is used");
-  assert.equal(game.raceStats.rocks.health.max, 1234, "Injected race stats are used");
+  try {
+    assert.equal(game.config.meta.enemiesPerLevel, 5, "Injected config is used");
+    assert.equal(game.raceStats.rocks.health.max, 1234, "Injected race stats are used");
 
-  game.clock.reset();
-  game.run();
+    game.clock.reset();
+    game.run();
 
-  game.entityManager.spawnMatch(1);
-  const enemy = game.entityManager.enemies[0];
-  assert.equal(enemy.maxLife, 1234, "Enemy uses the custom max health from injected race stats");
+    game.entityManager.spawnMatch(1);
+    const enemy = game.entityManager.enemies[0];
+    assert.equal(enemy.maxLife, 1234, "Enemy uses the custom max health from injected race stats");
+  } finally {
+    game.destroy();
+  }
 });
