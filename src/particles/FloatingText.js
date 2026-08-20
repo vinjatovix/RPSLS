@@ -1,5 +1,11 @@
 export class FloatingText {
-  constructor({ context, x, y, text, color }) {
+  constructor(options) {
+    if (options) {
+      this.init(options);
+    }
+  }
+
+  init({ context, x, y, text, color }) {
     this.context = context;
     this.x = x;
     this.y = y;
