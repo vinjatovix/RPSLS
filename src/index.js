@@ -8,6 +8,8 @@ import { ScoreManager } from "./scoring/ScoreManager.js";
 import { DebugDrawer } from "./ui/index.js";
 
 class Game {
+  #started = false;
+
   constructor({
     startLevel = 0,
     mode = "infinite-death",
@@ -125,15 +127,22 @@ class Game {
     this.animationFrameId = null;
     this.onLeagueEnd = null;
 
+    this.#setupPointerEvents();
+  }
+
+  start() {
+    if (this.#started) {
+      return;
+    }
+
     if (this.progressManager.isTeamChosen()) {
+      this.#started = true;
       if (this.mode.kind === "level") {
         this.matchManager.startMatch();
       } else {
         this.matchManager.nextMatch();
       }
     }
-
-    this.#setupPointerEvents();
   }
 
   get enemies() {

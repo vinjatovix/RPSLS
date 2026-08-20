@@ -10,12 +10,12 @@
 - Violates SRP and project conventions.
 
 ## Objectives
-- [ ] Remove `ScoreManager` dependency from `CombatSystem`.
-- [ ] Refactor `CombatSystem` to emit the `"kill"` event via `EventBus` upon a successful kill.
-- [ ] Refactor `ScoreManager` to subscribe to the `"kill"` event instead of exposing `recordKill` for direct invocation.
-- [ ] Prevent `ScoreManager` from re-emitting `"kill"`, as `CombatSystem` will now be the source of truth for this event.
-- [ ] Create a dedicated unit test suite for `ScoreManager`.
-- [ ] Refactor `CombatSystem` unit tests to verify event emission instead of `ScoreManager` state.
+- [x] Remove `ScoreManager` dependency from `CombatSystem`.
+- [x] Refactor `CombatSystem` to emit the `"kill"` event via `EventBus` upon a successful kill.
+- [x] Refactor `ScoreManager` to subscribe to the `"kill"` event instead of exposing `recordKill` for direct invocation.
+- [x] Prevent `ScoreManager` from re-emitting `"kill"`, as `CombatSystem` will now be the source of truth for this event.
+- [x] Create a dedicated unit test suite for `ScoreManager`.
+- [x] Refactor `CombatSystem` unit tests to verify event emission instead of `ScoreManager` state.
 
 ## Architecture & Design
 
@@ -45,13 +45,13 @@
 
 ## Verification Plan (Definition of Done)
 ### Automated Tests
-- [ ] Refactor `test/unit/combat-system.test.mjs` to assert that `EventBus.emit('kill', ...)` was called.
-- [ ] Create `test/unit/score-manager.test.mjs` to fully test `ScoreManager` initialization, score keeping, ratio calculations, MVP logic, ranking, and reset functionality.
-- [ ] Ensure `FakeGame` and other testing doubles no longer inject a mock `scoreManager` where it's no longer needed (like into `CombatSystem` via `EntityManager` or similar paths).
+- [x] Refactor `test/unit/combat-system.test.mjs` to assert that `EventBus.emit('kill', ...)` was called.
+- [x] Create `test/unit/score-manager.test.mjs` to fully test `ScoreManager` initialization, score keeping, ratio calculations, MVP logic, ranking, and reset functionality.
+- [x] Ensure `FakeGame` and other testing doubles no longer inject a mock `scoreManager` where it's no longer needed (like into `CombatSystem` via `EntityManager` or similar paths).
 
 ### Manual Verification
-- [ ] Run `npm test` and `npm run balance`.
-- [ ] Verify that UI scoreboards update correctly during a match.
+- [x] Run `npm test` and `npm run balance`.
+- [x] Verify that UI scoreboards update correctly during a match.
 
 ## Risks & Mitigations
 - **Risk:** Existing tests mocking `scoreManager` might fail if not fully updated.

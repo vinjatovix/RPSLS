@@ -24,12 +24,16 @@ export class ScoreManager {
           this.addWin(winner, { match });
         }
       });
+      this.eventBus.subscribe("kill", ({ killerTeam, victimTeam }) => {
+        this.recordKill(killerTeam, victimTeam);
+      });
     }
   }
 
   recordKill(killerTeam, victimTeam) {
     if (!this.teams[killerTeam] || !this.teams[victimTeam]) {
       console.warn(`Team not found: ${killerTeam} or ${victimTeam}`);
+
       return;
     }
 
@@ -46,7 +50,6 @@ export class ScoreManager {
         ? this.teams[victimTeam].kills / this.teams[victimTeam].deaths
         : this.teams[victimTeam].kills;
 
-    this.eventBus?.emit("kill", { killerTeam, victimTeam });
     this.eventBus?.emit("score:update");
   }
 
@@ -71,6 +74,7 @@ export class ScoreManager {
 
   getRanking() {
     const ranking = Object.values(this.teams);
+
     return this.sortRanking(ranking);
   }
 

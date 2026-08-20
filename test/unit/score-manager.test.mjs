@@ -67,16 +67,14 @@ test("ScoreManager: recordKill handles invalid team names gracefully", () => {
   assert.equal(scoreManager.getTeam("rocks").kills, 0);
 });
 
-test("ScoreManager: recordKill emits kill event with correct payload", () => {
+test("ScoreManager: processes kill event from EventBus", () => {
   const eventBus = new FakeEventBus();
   const scoreManager = new ScoreManager({ eventBus, raceStats: RACE_STATS });
 
-  scoreManager.recordKill("rocks", "scissors");
+  eventBus.emit("kill", { killerTeam: "rocks", victimTeam: "scissors" });
 
-  const killEvents = eventBus.getEmitted("kill");
-
-  assert.equal(killEvents.length, 1);
-  assert.deepEqual(killEvents[0].data, { killerTeam: "rocks", victimTeam: "scissors" });
+  assert.equal(scoreManager.getTeam("rocks").kills, 1);
+  assert.equal(scoreManager.getTeam("scissors").deaths, 1);
 });
 
 test("ScoreManager: recordKill emits score:update event", () => {

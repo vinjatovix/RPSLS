@@ -88,6 +88,8 @@ document.addEventListener("DOMContentLoaded", () => {
       upgrades: instance.upgrades
     });
 
+    instance.start();
+
     instance.onLeagueEnd = payload => menu.showLeagueResult(payload);
 
     const animate = () => {
