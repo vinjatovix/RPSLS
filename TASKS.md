@@ -3,13 +3,12 @@
 ## 📋 Active Specifications
 *(Tasks currently being worked on. Each entry should link to its spec file in `docs/specs/`)*
 
-- [ ] 🔥 **[TODO - PRIORITY]** Spec #18: Decoupling CombatSystem and ScoreManager (`docs/specs/spec_18_decouple_score_manager.md`)
+- [ ] 🔥 **[TODO - PRIORITY]** Spec #3: Particle Object Pooling (`docs/specs/spec_03_particle_object_pooling.md`)
 
 ## 🗄️ Backlog
 *(Planned technical improvements and features)*
 
 ### 🛠️ Refactoring (Technical Debt)
-- [ ] **[TODO]** Spec #3: Particle Object Pooling (`docs/specs/spec_03_particle_object_pooling.md`)
 - [ ] **[TODO]** Spec #4: Canvas Rendering Optimization (`docs/specs/spec_04_canvas_rendering_optimization.md`)
 - [ ] **[TODO]** Spec #5: UI DOM Updates Optimization (`docs/specs/spec_05_ui_dom_updates_optimization.md`)
 - [ ] **[TODO]** Spec #6: LocalStorage Progress Persistence (`docs/specs/spec_06_progress_persistence.md`)
@@ -32,5 +31,6 @@
 - [x] **[DONE]** Spec #12: Test Infrastructure & Strategy Improvements (`docs/specs/spec_12_test_infrastructure.md`)
 - [x] **[DONE]** Spec #14: EntityManager Extraction (`docs/specs/spec_14_entity_manager.md`)
 - [x] **[DONE]** Spec #15: MatchManager Extraction (`docs/specs/spec_15_match_manager.md`)
+- [x] **[DONE]** Spec #18: Decoupling CombatSystem and ScoreManager (`docs/specs/spec_18_decouple_score_manager.md`)
 - [x] **[DONE]** Spec #19: Decouple Global Config via Dependency Injection (`docs/specs/spec_19_decouple_global_config_injection.md`)
 - [x] **[DONE]** Spec #20: Separate Game Module from Browser Bootstrap (`docs/specs/spec_20_separate_game_module_from_browser_bootstrap.md`)

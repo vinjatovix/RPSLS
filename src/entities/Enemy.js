@@ -61,7 +61,7 @@ export class Enemy {
       armor,
       vampire,
       buffManager: this.buffManager,
-      scoreManager: this.game.scoreManager
+      eventBus: this.game?.eventBus
     });
     this.renderer = new EnemyRenderer(this, this.context, this.game.canvasAdapter, this.game.options);
   }

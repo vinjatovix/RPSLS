@@ -304,4 +304,33 @@ test('UI Event-Driven Architecture', async (t) => {
       assert.deepEqual(menu.leagueLengths, [10, 20], 'Should resolve custom leagueLengths from game');
     });
   });
+
+  await t.test('InfoPanel reacts to game:match-start event and draws state correctly', async () => {
+    const { eventBus, mockProgress } = setupUIContext({
+      isTeamChosen: () => true,
+      credits: 150
+    });
+
+    const panel = new InfoPanel({
+      progressManager: mockProgress,
+      eventBus
+    });
+
+    try {
+      eventBus.emit('game:match-start', {
+        matchNumber: 3,
+        timeLeft: 12000,
+        timeless: false,
+        mode: { isLeague: true, modeKey: 'deathmatch' },
+        leagueLength: 10
+      });
+
+      const textContent = document.body.textContent;
+      assert.ok(textContent.includes('Match: 3/10'), 'Should display Match 3 of league of 10');
+      assert.ok(textContent.includes('12s'), 'Should display remaining time of 12 seconds');
+      assert.ok(textContent.includes('150'), 'Should display progress credits');
+    } finally {
+      panel.destroy();
+    }
+  });
 });

@@ -43,7 +43,7 @@ function makeFakeGame(arena, raceStats) {
       mechanics: { limitCanvas: true, outDies: false },
       effects: {}
     },
-    scoreManager: { recordKill: () => {} },
+    eventBus: { emit: () => {} },
     raceStats
   };
 }

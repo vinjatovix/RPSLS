@@ -127,6 +127,7 @@ test("Capture mode: sets mechanics.capture", () => {
 
 test("Level mode: starts at the chosen level without a phantom match", () => {
   const lvl = new Game({ startLevel: 100, mode: "level-capture", team: "rocks", adapters: createFakeAdapters() });
+  lvl.start();
   try {
     assert.equal(lvl.matchManager.match, 100, `first match = chosen level (got ${lvl.matchManager.match})`);
     assert.equal(lvl.options.mechanics.capture, true);
@@ -137,6 +138,7 @@ test("Level mode: starts at the chosen level without a phantom match", () => {
   }
 
   const lvlDeath = new Game({ startLevel: 0, mode: "level-death", team: "rocks", adapters: createFakeAdapters() });
+  lvlDeath.start();
   try {
     assert.equal(lvlDeath.matchManager.match, 0, "level 0 → match 0");
     assert.equal(lvlDeath.options.mechanics.capture, false);
@@ -146,6 +148,7 @@ test("Level mode: starts at the chosen level without a phantom match", () => {
   }
 
   const lvlMax = new Game({ startLevel: 2000, mode: "level-death", team: "rocks", adapters: createFakeAdapters() });
+  lvlMax.start();
   try {
     assert.equal(lvlMax.matchManager.timeLeft, 60000, `lvl 2000: timer capped at 60000ms`);
   } finally {
@@ -220,6 +223,27 @@ test("Anti-stall: breaks timeless mode and triggers countdown after stallTimeout
 
     game.update(2000);
     assert.equal(game.matchManager.timeLeft, 7900, "timeLeft should decrease once out of timeless mode");
+  } finally {
+    game.destroy();
+  }
+});
+
+test("Game start: is idempotent and does not start multiple matches upon consecutive calls", () => {
+  const game = new Game({ startLevel: 0, mode: "infinite-death", adapters: createFakeAdapters() });
+  try {
+    game.progressManager.reset();
+    game.progressManager.selectTeam("rocks");
+
+    let matchStarts = 0;
+    game.eventBus.subscribe("game:match-start", () => {
+      matchStarts++;
+    });
+
+    game.start();
+    game.start();
+    game.start();
+
+    assert.equal(matchStarts, 1, "Should only start match once even when start() is called multiple times");
   } finally {
     game.destroy();
   }

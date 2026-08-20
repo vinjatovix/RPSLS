@@ -1,14 +1,14 @@
 import { CollisionDetector } from "../canvas/index.js";
 
 export class CombatSystem {
-  constructor({ entity, baseDamage, damageMultiplier, armor, vampire, buffManager, scoreManager }) {
+  constructor({ entity, baseDamage, damageMultiplier, armor, vampire, buffManager, eventBus }) {
     this.entity = entity;
     this.baseDamage = baseDamage;
     this.damageMultiplier = damageMultiplier;
     this.armor = armor;
     this.vampire = vampire;
     this.buffManager = buffManager;
-    this.scoreManager = scoreManager;
+    this.eventBus = eventBus;
 
     const maxDimension = Math.max(this.entity.width || 20, this.entity.height || 20);
     const safetyMarginMultiplier = 1.25;
@@ -44,7 +44,7 @@ export class CombatSystem {
     if (enemy.life <= 0) {
       enemy.dead = true;
       enemy.killedBy = this.entity.team;
-      this.scoreManager.recordKill(this.entity.team, enemy.team);
+      this.eventBus?.emit("kill", { killerTeam: this.entity.team, victimTeam: enemy.team });
     }
   }
 
