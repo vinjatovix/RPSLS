@@ -1,4 +1,3 @@
-import "./dom-stub.js";
 import { RACE_STATS } from "../src/config/gameConfig.js";
 import { runCampaign, aggregateRuns } from "../src/testing/balanceRunner.js";
 import { TICK_MS } from "./doubles/setupSimulationContext.mjs";

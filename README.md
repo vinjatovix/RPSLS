@@ -57,7 +57,8 @@ The game operates on an evolutionary "predator-prey" loop.
 
 The project is built as a **headless-capable, pure ESM engine**. It requires no transpilation and runs directly in modern browsers and Node.js environments.
 
-- **Engine Core (`src/index.js`):** The main loop and game bootstrap.
+- **Engine Core (`src/index.js`):** The pure simulation engine class (`Game`). Contains zero browser-specific code or DOM references, enabling flawless headless execution.
+- **Browser Bootstrap (`src/main.js`):** The browser-only entry point. Responsible for instantiating physical browser-bound adapters (`CanvasAdapter`, `LocalStorageAdapter`, `InputHandler`) and binding decoupled DOM panels to the game instance's event bus.
 - **Deterministic Simulation:** Employs a mathematically exact, 32-bit bitwise-coerced PRNG (`mulberry32`) guaranteeing cross-platform reproducible simulation paths over millions of iterations without Float64 precision drift. Cosmetics/visuals (such as particles) are stochastically isolated from the core physics simulation.
 - **Phase-Separated Execution Pipeline:** Structured updates into distinct, strictly synchronized temporal phases (AI/Targeting $\to$ Movement $\to$ Spatial Grid Sync $\to$ Collision Resolution) to eliminate temporal frame-aliasing and ensure spatial consistency.
 - **Headless Capability:** The entire game logic is decoupled from the DOM, allowing the `src/testing/` harness to run high-speed simulations in a terminal.

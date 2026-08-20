@@ -1,14 +1,11 @@
-import { CanvasAdapter, CollisionDetector, SpatialGrid } from "./canvas/index.js";
+import { CollisionDetector, SpatialGrid } from "./canvas/index.js";
 import { GAME_CONFIG, GAME_MODES, LEAGUE_LENGTHS, POWERUP_TYPES, RACE_STATS, UPGRADES } from "./config/gameConfig.js";
-import { Clock, EventBus, deepFreeze } from "./core/index.js";
-import { Enemy, PowerUp, MatchManager, EntityManager, RACE_CLASSES } from "./entities/index.js";
-import { InputHandler } from "./input/InputHandler.js";
+import { Clock, EventBus } from "./core/index.js";
+import { EntityManager, MatchManager } from "./entities/index.js";
 import { ProgressManager } from "./meta/ProgressManager.js";
 import { GameSettings } from "./options/GameSettings.js";
-import { ParticleSystem } from "./particles/index.js";
 import { ScoreManager } from "./scoring/ScoreManager.js";
-import { LocalStorageAdapter } from "./storage/LocalStorageAdapter.js";
-import { MenuController, InfoPanel, ScorePanel, DebugDrawer, MetaPanel } from "./ui/index.js";
+import { DebugDrawer } from "./ui/index.js";
 
 class Game {
   constructor({
@@ -21,7 +18,8 @@ class Game {
     upgrades = UPGRADES,
     powerupTypes = POWERUP_TYPES,
     gameModes = GAME_MODES,
-    leagueLengths = LEAGUE_LENGTHS
+    leagueLengths = LEAGUE_LENGTHS,
+    adapters
   } = {}) {
     this.config = config;
     this.raceStats = raceStats;
@@ -39,18 +37,19 @@ class Game {
     this.mode = this.gameModes[this.modeKey];
     this.leagueLength = leagueLength;
 
-    this.inputHandler = new InputHandler();
-    this.storageAdapter = new LocalStorageAdapter();
+    if (!adapters || !adapters.inputHandler || !adapters.storageAdapter || !adapters.canvasAdapter) {
+      throw new Error("Game requires valid adapters: inputHandler, storageAdapter, and canvasAdapter must be provided.");
+    }
+
+    this.inputHandler = adapters.inputHandler;
+    this.storageAdapter = adapters.storageAdapter;
     this.options = new GameSettings({
       inputHandler: this.inputHandler,
       storageAdapter: this.storageAdapter,
       gameConfig: this.config
     });
 
-    this.canvasAdapter = new CanvasAdapter({
-      canvasId: "canvas1",
-      displayConfig: this.options.display
-    });
+    this.canvasAdapter = adapters.canvasAdapter;
 
     const resizeLevel = this.mode.kind === "level" ? startLevel : 0;
     const { width, height } = this.canvasAdapter.resize(resizeLevel);
@@ -121,24 +120,10 @@ class Game {
       });
     });
 
-    this.scorePanel = new ScorePanel({ 
-      scoreManager: this.scoreManager, 
-      eventBus: this.eventBus 
-    });
-    this.infoPanel = new InfoPanel({ 
-      progressManager: this.progressManager, 
-      eventBus: this.eventBus 
-    });
     this.lastWin = null;
     this.destroyed = false;
     this.animationFrameId = null;
     this.onLeagueEnd = null;
-    this.metaPanel = new MetaPanel({
-      progressManager: this.progressManager,
-      eventBus: this.eventBus,
-      raceStats: this.raceStats,
-      upgrades: this.upgrades
-    });
 
     if (this.progressManager.isTeamChosen()) {
       if (this.mode.kind === "level") {
@@ -199,19 +184,10 @@ class Game {
 
   destroy() {
     this.destroyed = true;
-    cancelAnimationFrame(this.animationFrameId);
-    this.inputHandler.destroy();
+    if (typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this.animationFrameId);
+    }
     this.canvasAdapter.getCanvas().removeEventListener("pointerdown", this.boundPointerDown);
-    
-    if (this.scorePanel && typeof this.scorePanel.destroy === 'function') {
-      this.scorePanel.destroy();
-    }
-    if (this.infoPanel && typeof this.infoPanel.destroy === 'function') {
-      this.infoPanel.destroy();
-    }
-    if (this.metaPanel && typeof this.metaPanel.destroy === 'function') {
-      this.metaPanel.destroy();
-    }
   }
 
   #setupPointerEvents() {
@@ -271,89 +247,5 @@ class Game {
     this.draw();
   }
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-  if (window.__NO_AUTOSTART__) return;
-
-  // Anti-hack barrier: deep-freezes the prototypes of the
-  // game classes to prevent runtime manipulation in the browser.
-  for (const classes of [
-    Game,
-    EntityManager,
-    ScorePanel,
-    InfoPanel,
-    DebugDrawer,
-    MetaPanel,
-    ParticleSystem,
-    MenuController,
-    PowerUp,
-    Enemy,
-    ...Object.values(RACE_CLASSES)
-  ]) {
-    if (classes && classes.prototype) deepFreeze(classes.prototype);
-  }
-
-  let game = null;
-  let animationFrameId = null;
-
-  const start = (config = {}) => {
-    const { mode = "infinite-death", leagueLength = 50, startLevel = 0, team = null } = config;
-    let level = +startLevel;
-    if (level < 0 || level > 2000 || isNaN(level)) {
-      level = 0;
-    }
-
-    if (game) game.destroy();
-    cancelAnimationFrame(animationFrameId);
-
-    const instance = new Game({ startLevel: level, mode, leagueLength, team });
-    game = instance;
-
-    instance.onLeagueEnd = payload => menu.showLeagueResult(payload);
-
-    const animate = () => {
-      if (instance.destroyed) return;
-      instance.run();
-      animationFrameId = instance.animationFrameId = requestAnimationFrame(animate);
-    };
-
-    animate();
-  };
-
-  const menu = new MenuController({
-    getGame: () => game,
-    onStart: start
-  });
-
-  start();
-
-  if (!game.progressManager.isTeamChosen()) {
-    menu.showPause(false);
-  }
-
-  window.addEventListener("keydown", event => {
-    if (event.key === "Escape") {
-      if (menu.isOpen()) {
-        menu.close();
-      } else {
-        menu.showPause(!!game?.progressManager?.isTeamChosen());
-      }
-    }
-  });
-
-  document.addEventListener("visibilitychange", () => {
-    if (!game) return;
-    if (document.hidden) {
-      game.matchManager.paused = true;
-    } else {
-      // Avoid the giant deltaTime of the resumption (rAF stops in the
-      // background and Date.now() would accumulate all that time).
-      game.clock.reset();
-      if (!menu.isOpen()) {
-        game.matchManager.paused = false;
-      }
-    }
-  });
-});
 
 export { Game };

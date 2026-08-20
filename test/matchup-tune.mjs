@@ -4,7 +4,6 @@
  *   node test/matchup-tune.mjs [seeds=8] [mult1 mult2 ...]
  */
 
-import "./dom-stub.js";
 import { RACE_STATS } from "../src/config/gameConfig.js";
 import { runMatchupSim } from "../src/testing/matchupSim.js";
 

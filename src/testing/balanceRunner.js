@@ -1,65 +1,12 @@
 import { RACE_STATS } from "../config/gameConfig.js";
 import { Random } from "../core/index.js";
 import { Game } from "../index.js";
+import { createFakeAdapters } from "./FakeAdapters.js";
 
 export const TEAMS = Object.keys(RACE_STATS);
 export const BUCKET_SIZE = 25;
 export const CHUNK_STEPS = 2000;
 export const MAX_STEPS_PER_RUN = 500000;
-
-let installed = false;
-
-export function installTestEnv() {
-  if (installed) return;
-  installed = true;
-  window.__NO_AUTOSTART__ = true;
-
-  const fake = createFakeStorage();
-  try {
-    Object.defineProperty(window, "localStorage", {
-      configurable: true,
-      value: fake
-    });
-  } catch {
-    // Fallback handled below via Storage prototype patch
-  }
-  
-  const proto = window.Storage?.prototype;
-  if (proto) {
-    const delegate = fn => function (...args) {
-      return fn.apply(fake, args);
-    };
-    proto.getItem = delegate(fake.getItem);
-    proto.setItem = delegate(fake.setItem);
-    proto.removeItem = delegate(fake.removeItem);
-    proto.clear = delegate(fake.clear);
-    proto.key = delegate(fake.key);
-  }
-}
-
-function createFakeStorage() {
-  const store = new Map();
-  return {
-    get length() {
-      return store.size;
-    },
-    getItem(key) {
-      return store.has(key) ? store.get(key) : null;
-    },
-    setItem(key, value) {
-      store.set(String(key), String(value));
-    },
-    removeItem(key) {
-      store.delete(String(key));
-    },
-    clear() {
-      store.clear();
-    },
-    key(index) {
-      return [...store.keys()][index] ?? null;
-    }
-  };
-}
 
 function bucketOf(match, bucketCount) {
   return Math.min(bucketCount - 1, Math.floor((match - 1) / BUCKET_SIZE));
@@ -128,7 +75,11 @@ function getAliveTeams(game) {
 }
 
 function createGameInstance({ capture, powerups, config, raceStats }) {
-  const options = { startLevel: 0, mode: capture ? "infinite-capture" : "infinite-death" };
+  const options = {
+    startLevel: 0,
+    mode: capture ? "infinite-capture" : "infinite-death",
+    adapters: createFakeAdapters()
+  };
   if (config) options.config = config;
   if (raceStats) options.raceStats = raceStats;
   const game = new Game(options);
@@ -250,8 +201,6 @@ export async function runCampaign({
   isCampaignRunning = true;
 
   try {
-    installTestEnv();
-
     if (seed !== null) {
       Random.setSeed(seed);
     }
@@ -273,6 +222,7 @@ export async function runCampaign({
     } finally {
       unsubscribe();
       game.destroy();
+      game.inputHandler.destroy();
       if (seed !== null) {
         Random.restore();
       }
@@ -596,4 +546,3 @@ export function formatReport(aggregate, { thresholdPp = 5 } = {}) {
   return lines.join("\n");
 }
 
-installTestEnv();

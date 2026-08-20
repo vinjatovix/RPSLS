@@ -1,4 +1,3 @@
-import "./dom-stub.js";
 import { TICK_MS } from "./doubles/setupSimulationContext.mjs";
 
 const { RACE_STATS, GAME_CONFIG } = await import("../src/config/gameConfig.js");
